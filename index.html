@@ -1,1168 +1,820 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0a1628">
+<meta name="theme-color" content="#0a1628" id="meta-theme">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Monitor Arecibo">
-<meta name="description" content="Monitor meteorológico en tiempo real para Arecibo, Puerto Rico. Alertas de inundación, condiciones marítimas y pronóstico NWS.">
-
-<!-- Open Graph (para compartir por WhatsApp/Telegram) -->
+<meta name="description" content="Monitor meteorológico en tiempo real para Arecibo, Puerto Rico.">
 <meta property="og:title" content="Monitor Meteorológico — Arecibo, PR">
-<meta property="og:description" content="Alertas NWS en tiempo real: inundaciones, ríos, condiciones marítimas y pronóstico 7 días.">
+<meta property="og:description" content="Alertas NWS · Radar · Ríos · Mareas · Inundaciones en tiempo real">
 <meta property="og:type" content="website">
-
 <title>🌀 Monitor Meteorológico — Arecibo, PR</title>
-
-<!-- PWA Manifest inline -->
 <script>
-const manifestData = {
-  name: "Monitor Meteorológico Arecibo",
-  short_name: "Monitor PR",
-  description: "Alertas NWS tiempo real – Arecibo, Puerto Rico",
-  start_url: "./",
-  display: "standalone",
-  background_color: "#0a1628",
-  theme_color: "#0a1628",
-  icons: [
-    { src: "https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f300.png", sizes: "72x72", type: "image/png" },
-    { src: "https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f300.png", sizes: "192x192", type: "image/png" }
-  ]
-};
-const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
-const manifestUrl = URL.createObjectURL(blob);
-document.addEventListener('DOMContentLoaded', () => {
-  const link = document.createElement('link');
-  link.rel = 'manifest'; link.href = manifestUrl;
-  document.head.appendChild(link);
-});
+const manifestData={name:"Monitor Meteorológico Arecibo",short_name:"Monitor PR",description:"Alertas NWS tiempo real – Arecibo, Puerto Rico",start_url:"./",display:"standalone",background_color:"#0a1628",theme_color:"#0a1628",icons:[{src:"https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f300.png",sizes:"192x192",type:"image/png"}]};
+const _mb=new Blob([JSON.stringify(manifestData)],{type:'application/json'});
+document.addEventListener('DOMContentLoaded',()=>{const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(_mb);document.head.appendChild(l);});
+const SW_CODE=`self.addEventListener('push',e=>{const d=e.data?e.data.json():{title:'⚠️ Alerta Meteorológica',body:'Nueva alerta para Puerto Rico',icon:''};e.waitUntil(self.registration.showNotification(d.title,{body:d.body,icon:d.icon||'',vibrate:[200,100,200],tag:'nws-alert',requireInteraction:true}));});self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(clients.openWindow('/'));});self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(clients.claim()));`;
+if('serviceWorker'in navigator){const b=new Blob([SW_CODE],{type:'application/javascript'});navigator.serviceWorker.register(URL.createObjectURL(b)).catch(()=>{});}
+(function(){const s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
 </script>
-
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-
 <style>
-/* ═══════════════════════════════════════
-   VARIABLES & RESET
-═══════════════════════════════════════ */
-:root {
-  --navy:   #0a1628;
-  --deep:   #0d1f3c;
-  --ocean:  #0e3a6e;
-  --blue:   #1565c0;
-  --cyan:   #00b4d8;
-  --teal:   #00e5d4;
-  --warn:   #ff6b35;
-  --danger: #e63946;
-  --safe:   #06d6a0;
-  --gold:   #ffd166;
-  --text:   #e8f4fd;
-  --muted:  #7fa8cc;
-  --card:   rgba(13,31,60,0.88);
-  --border: rgba(0,180,216,0.18);
-}
-
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--navy);
-  color: var(--text);
-  font-family: 'Barlow Condensed', sans-serif;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* Fondo animado */
-body::before {
-  content:'';
-  position:fixed; inset:0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(21,101,192,0.18) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 70%, rgba(0,180,216,0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 60% at 50% 50%, rgba(0,229,212,0.05) 0%, transparent 70%);
-  animation: bgPulse 8s ease-in-out infinite alternate;
-  pointer-events:none; z-index:0;
-}
-
-/* Grid de fondo */
-body::after {
-  content:'';
-  position:fixed; inset:0;
-  background-image:
-    linear-gradient(rgba(0,180,216,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,180,216,0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events:none; z-index:0;
-}
-
-@keyframes bgPulse { from{opacity:.6} to{opacity:1} }
-
-/* ═══════════════════════════════════════
-   HEADER
-═══════════════════════════════════════ */
-.header {
-  position:sticky; top:0; z-index:100;
-  padding: 16px 28px 14px;
-  border-bottom: 1px solid var(--border);
-  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
-  background: rgba(10,22,40,0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.header-left h1 {
-  font-size: clamp(1.3rem, 4vw, 2rem);
-  font-weight:900; letter-spacing:0.06em; text-transform:uppercase;
-  line-height:1;
-}
-.header-left h1 span { color:var(--cyan); }
-.header-left p {
-  font-family:'Space Mono',monospace;
-  font-size:clamp(0.5rem, 1.5vw, 0.65rem);
-  color:var(--muted); letter-spacing:0.12em; margin-top:4px; text-transform:uppercase;
-}
-
-.header-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
-
-#clock {
-  font-family:'Space Mono',monospace;
-  font-size:clamp(1rem, 3vw, 1.6rem);
-  color:var(--cyan); letter-spacing:0.05em; font-weight:700;
-}
-#date-display {
-  font-family:'Space Mono',monospace;
-  font-size:clamp(0.5rem, 1.5vw, 0.62rem);
-  color:var(--muted); letter-spacing:0.1em; text-transform:uppercase;
-}
-
-.header-btns { display:flex; gap:8px; }
-
-.hdr-btn {
-  background:var(--ocean); color:var(--cyan);
-  border:1px solid var(--border);
-  padding:5px 12px;
-  font-family:'Space Mono',monospace; font-size:0.58rem; letter-spacing:0.1em;
-  cursor:pointer; transition:all .2s; text-transform:uppercase; white-space:nowrap;
-}
-.hdr-btn:hover { background:var(--blue); border-color:var(--cyan); }
-.hdr-btn.active { background:var(--blue); border-color:var(--cyan); }
-
-/* ═══════════════════════════════════════
-   TABS NAVEGACIÓN
-═══════════════════════════════════════ */
-.tabs {
-  display:flex; gap:0;
-  background: rgba(10,22,40,0.7);
-  border-bottom:1px solid var(--border);
-  position:sticky; top:62px; z-index:90;
-  overflow-x:auto;
-  scrollbar-width:none;
-}
-.tabs::-webkit-scrollbar { display:none; }
-
-.tab {
-  padding:10px 20px;
-  font-family:'Space Mono',monospace; font-size:0.62rem;
-  letter-spacing:0.12em; text-transform:uppercase;
-  color:var(--muted); cursor:pointer;
-  border-bottom:2px solid transparent;
-  white-space:nowrap; transition:all .2s;
-  background:transparent; border-top:none; border-left:none; border-right:none;
-}
-.tab:hover { color:var(--text); }
-.tab.active { color:var(--cyan); border-bottom-color:var(--cyan); }
-
-/* ═══════════════════════════════════════
-   MAIN LAYOUT
-═══════════════════════════════════════ */
-.main {
-  position:relative; z-index:5;
-  padding: 24px 28px;
-  max-width:1400px; margin:0 auto;
-}
-
-/* Panels (tabs content) */
-.panel { display:none; }
-.panel.active { display:block; }
-
-/* ═══════════════════════════════════════
-   ALERTA BANNER
-═══════════════════════════════════════ */
-#alert-banner { margin-bottom:24px; display:none; }
-
-.alert-item {
-  background:linear-gradient(135deg,rgba(230,57,70,.15),rgba(230,57,70,.05));
-  border:1px solid rgba(230,57,70,.5);
-  border-left:4px solid var(--danger);
-  padding:12px 18px; margin-bottom:8px;
-  animation:alertPulse 2s ease-in-out infinite;
-}
-.alert-item.warn {
-  background:linear-gradient(135deg,rgba(255,107,53,.15),rgba(255,107,53,.05));
-  border-color:rgba(255,107,53,.5); border-left-color:var(--warn);
-  animation:warnPulse 3s ease-in-out infinite;
-}
-.alert-item.advisory {
-  background:linear-gradient(135deg,rgba(255,209,102,.1),rgba(255,209,102,.03));
-  border-color:rgba(255,209,102,.4); border-left-color:var(--gold);
-  animation:none;
-}
-@keyframes alertPulse { 0%,100%{border-left-color:var(--danger)} 50%{border-left-color:rgba(230,57,70,.3)} }
-@keyframes warnPulse  { 0%,100%{border-left-color:var(--warn)}   50%{border-left-color:rgba(255,107,53,.3)} }
-
-.alert-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px; }
-.alert-type { font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
-.alert-item   .alert-type { color:var(--danger); }
-.alert-item.warn .alert-type { color:var(--warn); }
-.alert-item.advisory .alert-type { color:var(--gold); }
-.alert-expires { font-family:'Space Mono',monospace; font-size:0.58rem; color:var(--muted); }
-.alert-title { font-size:0.92rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin-bottom:2px; }
-.alert-desc { font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted); line-height:1.5; }
-
-/* ═══════════════════════════════════════
-   GRIDS
-═══════════════════════════════════════ */
-.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:18px; }
-.grid-2 { display:grid; grid-template-columns:2fr 1fr; gap:18px; margin-bottom:18px; }
-.grid-2b { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
-.grid-1 { margin-bottom:18px; }
-
-/* ═══════════════════════════════════════
-   CARDS
-═══════════════════════════════════════ */
-.card {
-  background:var(--card);
-  border:1px solid var(--border);
-  backdrop-filter:blur(10px);
-  padding:18px 20px;
-  position:relative; overflow:hidden;
-  transition:border-color .3s;
-}
-.card::before {
-  content:''; position:absolute;
-  top:0; left:0; right:0; height:2px;
-  background:linear-gradient(90deg, var(--cyan), transparent);
-}
-.card:hover { border-color:rgba(0,180,216,.4); }
-.card.danger-card::before { background:linear-gradient(90deg,var(--danger),transparent); }
-.card.warn-card::before { background:linear-gradient(90deg,var(--warn),transparent); }
-.card.safe-card::before { background:linear-gradient(90deg,var(--safe),transparent); }
-.card.teal-card::before { background:linear-gradient(90deg,var(--teal),transparent); }
-
-.card-label {
-  font-family:'Space Mono',monospace; font-size:0.58rem;
-  letter-spacing:.18em; text-transform:uppercase; color:var(--muted);
-  margin-bottom:12px; display:flex; align-items:center; gap:8px;
-}
-.card-label::after { content:''; flex:1; height:1px; background:var(--border); }
-
-/* ═══════════════════════════════════════
-   BIG VALUES
-═══════════════════════════════════════ */
-.big-value { font-size:clamp(2rem,5vw,3.5rem); font-weight:900; letter-spacing:-.02em; line-height:1; }
-.big-unit { font-size:1rem; color:var(--muted); font-weight:300; margin-left:4px; }
-.sub-info { font-family:'Space Mono',monospace; font-size:0.6rem; color:var(--muted); margin-top:8px; letter-spacing:.05em; }
-
-.status-indicator { display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-top:8px; }
-.dot { width:8px; height:8px; border-radius:50%; animation:blink 1.5s ease-in-out infinite; flex-shrink:0; }
-.dot.safe   { background:var(--safe);   box-shadow:0 0 8px var(--safe); }
-.dot.warn   { background:var(--warn);   box-shadow:0 0 8px var(--warn); }
-.dot.danger { background:var(--danger); box-shadow:0 0 8px var(--danger); }
-.dot.info   { background:var(--cyan);   box-shadow:0 0 8px var(--cyan); }
-.dot.gold   { background:var(--gold);   box-shadow:0 0 8px var(--gold); }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
-
-/* ═══════════════════════════════════════
-   FORECAST DAYS
-═══════════════════════════════════════ */
-.forecast-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
-.forecast-day {
-  background:rgba(14,58,110,.4); border:1px solid var(--border);
-  padding:12px 6px; text-align:center; transition:all .2s; cursor:default;
-}
-.forecast-day:hover { background:rgba(21,101,192,.4); border-color:rgba(0,180,216,.4); }
-.forecast-day .day-name { font-family:'Space Mono',monospace; font-size:0.6rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
-.forecast-day .day-icon { font-size:1.5rem; display:block; margin-bottom:4px; }
-.forecast-day .day-temp { font-size:1.2rem; font-weight:700; }
-.forecast-day .day-rain { font-family:'Space Mono',monospace; font-size:0.58rem; margin-top:4px; }
-.forecast-day .day-short { font-size:0.6rem; color:var(--muted); margin-top:4px; line-height:1.3; }
-
-/* ═══════════════════════════════════════
-   MARITIME TABLE
-═══════════════════════════════════════ */
-.maritime-table { width:100%; border-collapse:collapse; font-family:'Space Mono',monospace; font-size:0.65rem; }
-.maritime-table td { padding:8px 0; border-bottom:1px solid var(--border); vertical-align:middle; }
-.maritime-table td:first-child { color:var(--muted); width:45%; text-transform:uppercase; letter-spacing:.06em; }
-.maritime-table td:last-child { color:var(--text); font-weight:700; font-size:0.78rem; text-align:right; }
-.marine-level { padding:2px 8px; font-size:0.58rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
-.marine-level.danger { background:rgba(230,57,70,.2); color:var(--danger); border:1px solid var(--danger); }
-.marine-level.warn   { background:rgba(255,107,53,.2); color:var(--warn);   border:1px solid var(--warn); }
-.marine-level.safe   { background:rgba(6,214,160,.2);  color:var(--safe);   border:1px solid var(--safe); }
-.marine-level.info   { background:rgba(0,180,216,.2);  color:var(--cyan);   border:1px solid var(--cyan); }
-
-/* ═══════════════════════════════════════
-   GAUGE INUNDACIÓN
-═══════════════════════════════════════ */
-.gauge-bar { width:100%; height:14px; background:rgba(14,58,110,.5); border:1px solid var(--border); position:relative; overflow:hidden; margin-bottom:14px; }
-.gauge-fill { height:100%; transition:width 1.5s cubic-bezier(.4,0,.2,1); position:relative; }
-.gauge-fill::after { content:''; position:absolute; right:0; top:0; bottom:0; width:2px; background:white; box-shadow:0 0 8px white; }
-.gauge-labels { display:flex; justify-content:space-between; font-family:'Space Mono',monospace; font-size:0.5rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; width:100%; margin-bottom:10px; }
-.risk-value { font-size:2.2rem; font-weight:900; text-align:center; }
-.risk-label { font-size:0.8rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; text-align:center; margin-top:2px; }
-
-/* ═══════════════════════════════════════
-   RÍOS TABLE
-═══════════════════════════════════════ */
-.rivers-table { width:100%; border-collapse:collapse; }
-.rivers-table th { font-family:'Space Mono',monospace; font-size:0.58rem; color:var(--cyan); text-transform:uppercase; letter-spacing:.1em; padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; }
-.rivers-table td { font-family:'Space Mono',monospace; font-size:0.65rem; padding:9px 10px; border-bottom:1px solid rgba(0,180,216,.08); vertical-align:middle; }
-.rivers-table tr:hover td { background:rgba(14,58,110,.3); }
-.rivers-table a { color:var(--cyan); text-decoration:none; }
-.rivers-table a:hover { color:var(--teal); text-decoration:underline; }
-.river-status { padding:2px 8px; font-size:0.55rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
-
-/* ═══════════════════════════════════════
-   RESOURCES GRID
-═══════════════════════════════════════ */
-.resources-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:4px; }
-.res-card {
-  display:block; background:rgba(14,58,110,.4); border:1px solid var(--border);
-  padding:14px 12px; text-decoration:none; color:var(--text); transition:all .2s;
-}
-.res-card:hover { background:rgba(21,101,192,.4); border-color:rgba(0,180,216,.4); }
-.res-card .res-icon { font-size:1.5rem; margin-bottom:6px; display:block; }
-.res-card .res-name { font-weight:700; font-size:0.82rem; letter-spacing:.04em; display:block; margin-bottom:2px; }
-.res-card .res-url  { font-family:'Space Mono',monospace; font-size:0.55rem; color:var(--muted); display:block; }
-
-/* ═══════════════════════════════════════
-   BOYAS / NDBC
-═══════════════════════════════════════ */
-.buoy-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.buoy-card { background:rgba(14,58,110,.4); border:1px solid var(--border); padding:12px; }
-.buoy-name { font-weight:700; font-size:0.82rem; color:var(--cyan); letter-spacing:.04em; margin-bottom:6px; }
-.buoy-data { font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted); line-height:1.8; }
-.buoy-data span { color:var(--text); font-weight:700; }
-
-/* ═══════════════════════════════════════
-   RIBBON / BADGE
-═══════════════════════════════════════ */
-.ribbon { position:absolute; top:12px; right:-28px; background:var(--danger); color:white; font-family:'Space Mono',monospace; font-size:0.52rem; letter-spacing:.1em; text-transform:uppercase; padding:3px 36px; transform:rotate(45deg); font-weight:700; display:none; }
-
-/* ═══════════════════════════════════════
-   BOTTOM BAR
-═══════════════════════════════════════ */
-.bottom-bar {
-  background:rgba(13,31,60,.7); border-top:1px solid var(--border);
-  padding:12px 28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
-  position:relative; z-index:5;
-}
-.sources { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
-.sources .lbl { font-family:'Space Mono',monospace; font-size:0.55rem; color:var(--muted); letter-spacing:.15em; text-transform:uppercase; }
-.sources a { color:var(--cyan); text-decoration:none; font-family:'Space Mono',monospace; font-size:0.6rem; transition:color .2s; }
-.sources a:hover { color:var(--teal); }
-#last-updated { font-family:'Space Mono',monospace; font-size:0.56rem; color:var(--muted); letter-spacing:.06em; }
-
-/* ═══════════════════════════════════════
-   INSTALL BANNER (PWA)
-═══════════════════════════════════════ */
-#install-banner {
-  display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
-  background:var(--ocean); border:1px solid var(--cyan); color:var(--text);
-  padding:12px 20px; z-index:200; max-width:360px; width:90%;
-  text-align:center; box-shadow:0 8px 32px rgba(0,0,0,.5);
-}
-#install-banner p { font-size:0.78rem; margin-bottom:10px; line-height:1.5; }
-#install-banner .btn-row { display:flex; gap:10px; justify-content:center; }
-#install-banner button { font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:.1em; text-transform:uppercase; padding:7px 16px; cursor:pointer; border:1px solid var(--cyan); }
-#install-banner #btn-install { background:var(--cyan); color:var(--navy); }
-#install-banner #btn-dismiss { background:transparent; color:var(--muted); border-color:var(--border); }
-
-/* ═══════════════════════════════════════
-   SPINNER
-═══════════════════════════════════════ */
-.spin { display:inline-block; width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--cyan); border-radius:50%; animation:spin .8s linear infinite; margin-left:6px; vertical-align:middle; }
-@keyframes spin { to{transform:rotate(360deg)} }
-.loading-text { font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); letter-spacing:.08em; }
-
-/* ═══════════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════════ */
-@media (max-width:900px) {
-  .grid-3  { grid-template-columns:1fr 1fr; }
-  .grid-2  { grid-template-columns:1fr; }
-  .grid-2b { grid-template-columns:1fr; }
-  .forecast-grid { grid-template-columns:repeat(4,1fr); }
-  .resources-grid { grid-template-columns:1fr 1fr; }
-  .buoy-grid { grid-template-columns:1fr; }
-  .main { padding:16px; }
-}
-@media (max-width:600px) {
-  .grid-3 { grid-template-columns:1fr; }
-  .forecast-grid { grid-template-columns:repeat(3,1fr); }
-  .resources-grid { grid-template-columns:1fr 1fr; }
-  .header { padding:12px 16px; }
-  .main { padding:12px; }
-  .tabs .tab { padding:8px 14px; font-size:0.58rem; }
-}
+:root{--navy:#0a1628;--deep:#0d1f3c;--ocean:#0e3a6e;--blue:#1565c0;--cyan:#00b4d8;--teal:#00e5d4;--warn:#ff6b35;--danger:#e63946;--safe:#06d6a0;--gold:#ffd166;--text:#e8f4fd;--muted:#7fa8cc;--card:rgba(13,31,60,.88);--border:rgba(0,180,216,.18);--bg:#0a1628;--input-bg:#0e3a6e;--input-border:rgba(0,180,216,.3);--note-bg:rgba(14,58,110,.5);}
+[data-theme="light"]{--navy:#f0f6ff;--deep:#e2edf8;--ocean:#c5daf5;--blue:#1565c0;--cyan:#0077a8;--teal:#007a6e;--warn:#d4561e;--danger:#c0202d;--safe:#047a5a;--gold:#9a7200;--text:#0d1f3c;--muted:#3d6080;--card:rgba(240,246,255,.92);--border:rgba(0,119,168,.2);--bg:#e8f2ff;--input-bg:#fff;--input-border:rgba(0,119,168,.35);--note-bg:rgba(197,218,245,.6);}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif;min-height:100vh;overflow-x:hidden;transition:background .35s,color .35s;}
+[data-theme="dark"] body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 30%,rgba(21,101,192,.18) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 70%,rgba(0,180,216,.12) 0%,transparent 50%),radial-gradient(ellipse 40% 60% at 50% 50%,rgba(0,229,212,.05) 0%,transparent 70%);animation:bgP 8s ease-in-out infinite alternate;pointer-events:none;z-index:0;}
+[data-theme="dark"] body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,180,216,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,180,216,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+@keyframes bgP{from{opacity:.6}to{opacity:1}}
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:100;padding:13px 22px 11px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:rgba(10,22,40,.92);backdrop-filter:blur(16px);transition:background .35s;}
+[data-theme="light"] .hdr{background:rgba(224,236,252,.94);}
+.hdr h1{font-size:clamp(1.1rem,3.5vw,1.8rem);font-weight:900;letter-spacing:.06em;text-transform:uppercase;line-height:1;}
+.hdr h1 span{color:var(--cyan);}
+.hdr-sub{font-family:'Space Mono',monospace;font-size:clamp(.45rem,1.3vw,.6rem);color:var(--muted);letter-spacing:.12em;margin-top:3px;text-transform:uppercase;}
+.hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+#clock{font-family:'Space Mono',monospace;font-size:clamp(.85rem,2.3vw,1.4rem);color:var(--cyan);letter-spacing:.05em;font-weight:700;}
+#date-display{font-family:'Space Mono',monospace;font-size:clamp(.42rem,1.2vw,.58rem);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.hbtns{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;margin-top:2px;}
+.hbtn{background:var(--ocean);color:var(--cyan);border:1px solid var(--border);padding:5px 10px;font-family:'Space Mono',monospace;font-size:.54rem;letter-spacing:.1em;cursor:pointer;transition:all .2s;text-transform:uppercase;white-space:nowrap;}
+.hbtn:hover,.hbtn.active{background:var(--blue);border-color:var(--cyan);}
+/* TABS */
+.tabs{display:flex;background:rgba(10,22,40,.7);border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:90;overflow-x:auto;scrollbar-width:none;transition:background .35s;}
+[data-theme="light"] .tabs{background:rgba(224,236,252,.85);}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:9px 16px;font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;background:transparent;border-top:none;border-left:none;border-right:none;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+/* MAIN */
+.main{position:relative;z-index:5;padding:18px 22px;max-width:1400px;margin:0 auto;}
+.panel{display:none;animation:fi .22s ease;}
+.panel.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* ALERT BANNER */
+#alert-banner{margin-bottom:18px;display:none;}
+.ai{background:linear-gradient(135deg,rgba(230,57,70,.15),rgba(230,57,70,.05));border:1px solid rgba(230,57,70,.5);border-left:4px solid var(--danger);padding:10px 14px;margin-bottom:6px;animation:aP 2s ease-in-out infinite;}
+.ai.warn{background:linear-gradient(135deg,rgba(255,107,53,.15),rgba(255,107,53,.05));border-color:rgba(255,107,53,.5);border-left-color:var(--warn);animation:wP 3s ease-in-out infinite;}
+.ai.adv{background:linear-gradient(135deg,rgba(255,209,102,.1),rgba(255,209,102,.03));border-color:rgba(255,209,102,.4);border-left-color:var(--gold);animation:none;}
+@keyframes aP{0%,100%{border-left-color:var(--danger)}50%{border-left-color:rgba(230,57,70,.3)}}
+@keyframes wP{0%,100%{border-left-color:var(--warn)}50%{border-left-color:rgba(255,107,53,.3)}}
+.ai-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;flex-wrap:wrap;gap:3px;}
+.ai-type{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;}
+.ai .ai-type{color:var(--danger);}.ai.warn .ai-type{color:var(--warn);}.ai.adv .ai-type{color:var(--gold);}
+.ai-exp{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);}
+.ai-title{font-size:.85rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:1px;}
+.ai-desc{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:1.5;}
+/* GRIDS */
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.g2{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;}
+.g2b{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.g1{margin-bottom:14px;}
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(10px);padding:14px 16px;position:relative;overflow:hidden;transition:border-color .3s,background .35s;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),transparent);}
+.card:hover{border-color:rgba(0,180,216,.4);}
+.card.dc::before{background:linear-gradient(90deg,var(--danger),transparent);}
+.card.wc::before{background:linear-gradient(90deg,var(--warn),transparent);}
+.card.sc::before{background:linear-gradient(90deg,var(--safe),transparent);}
+.card.tc::before{background:linear-gradient(90deg,var(--teal),transparent);}
+.card.gc::before{background:linear-gradient(90deg,var(--gold),transparent);}
+.clbl{font-family:'Space Mono',monospace;font-size:.54rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;display:flex;align-items:center;gap:7px;}
+.clbl::after{content:'';flex:1;height:1px;background:var(--border);}
+.subinfo{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted);margin-top:5px;letter-spacing:.05em;}
+.si{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:6px;}
+.dot{width:8px;height:8px;border-radius:50%;animation:blink 1.5s ease-in-out infinite;flex-shrink:0;}
+.dot.safe{background:var(--safe);box-shadow:0 0 8px var(--safe);}
+.dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn);}
+.dot.danger{background:var(--danger);box-shadow:0 0 8px var(--danger);}
+.dot.info{background:var(--cyan);box-shadow:0 0 8px var(--cyan);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+/* GAUGE */
+.gb{width:100%;height:12px;background:rgba(14,58,110,.5);border:1px solid var(--border);position:relative;overflow:hidden;margin-bottom:10px;}
+.gf{height:100%;transition:width 1.5s cubic-bezier(.4,0,.2,1);position:relative;}
+.gf::after{content:'';position:absolute;right:0;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px #fff;}
+.glbls{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.48rem;color:var(--muted);text-transform:uppercase;margin-bottom:7px;}
+.rv{font-size:1.9rem;font-weight:900;text-align:center;}
+.rl{font-size:.76rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;text-align:center;margin-top:2px;}
+/* FORECAST */
+.fcg{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.fcd{background:rgba(14,58,110,.4);border:1px solid var(--border);padding:9px 4px;text-align:center;transition:all .2s;}
+[data-theme="light"] .fcd{background:rgba(197,218,245,.5);}
+.fcd:hover{background:rgba(21,101,192,.4);border-color:rgba(0,180,216,.4);}
+.fcd .dn{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.fcd .di{font-size:1.3rem;display:block;margin-bottom:3px;}
+.fcd .dt{font-size:1.05rem;font-weight:700;}
+.fcd .dr{font-family:'Space Mono',monospace;font-size:.54rem;margin-top:2px;}
+.fcd .ds{font-size:.56rem;color:var(--muted);margin-top:2px;line-height:1.3;}
+/* MARITIME */
+.mt{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:.62rem;}
+.mt td{padding:7px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+.mt td:first-child{color:var(--muted);width:42%;text-transform:uppercase;letter-spacing:.06em;}
+.mt td:last-child{color:var(--text);font-weight:700;font-size:.74rem;text-align:right;}
+.ml{padding:2px 6px;font-size:.54rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.ml.danger{background:rgba(230,57,70,.2);color:var(--danger);border:1px solid var(--danger);}
+.ml.warn{background:rgba(255,107,53,.2);color:var(--warn);border:1px solid var(--warn);}
+.ml.safe{background:rgba(6,214,160,.2);color:var(--safe);border:1px solid var(--safe);}
+.ml.info{background:rgba(0,180,216,.2);color:var(--cyan);border:1px solid var(--cyan);}
+/* RIVERS */
+.rt{width:100%;border-collapse:collapse;}
+.rt th{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;}
+.rt td{font-family:'Space Mono',monospace;font-size:.62rem;padding:7px 8px;border-bottom:1px solid rgba(0,180,216,.08);vertical-align:middle;}
+.rt tr:hover td{background:rgba(14,58,110,.3);}
+.rt a{color:var(--cyan);text-decoration:none;}.rt a:hover{color:var(--teal);text-decoration:underline;}
+.rs{padding:2px 6px;font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+/* RESOURCES */
+.rg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;}
+.rc{display:block;background:rgba(14,58,110,.4);border:1px solid var(--border);padding:11px 9px;text-decoration:none;color:var(--text);transition:all .2s;}
+[data-theme="light"] .rc{background:rgba(197,218,245,.5);}
+.rc:hover{background:rgba(21,101,192,.4);border-color:rgba(0,180,216,.4);}
+.rc .ri{font-size:1.3rem;margin-bottom:4px;display:block;}
+.rc .rn{font-weight:700;font-size:.78rem;letter-spacing:.04em;display:block;margin-bottom:2px;}
+.rc .ru{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--muted);display:block;}
+/* TIDES */
+.tide-tl{display:flex;gap:2px;height:56px;align-items:flex-end;margin-bottom:5px;}
+.tide-b{flex:1;border-radius:2px 2px 0 0;transition:height .5s cubic-bezier(.4,0,.2,1);min-height:3px;background:linear-gradient(to top,var(--cyan),var(--teal));opacity:.65;}
+.tide-b.high{background:linear-gradient(to top,var(--warn),var(--gold));}
+.tide-b.now{opacity:1;box-shadow:0 0 6px var(--cyan);}
+.tide-lbls{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.48rem;color:var(--muted);}
+.tide-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.tide-it{flex:1;min-width:72px;background:rgba(14,58,110,.4);border:1px solid var(--border);padding:7px;text-align:center;}
+[data-theme="light"] .tide-it{background:rgba(197,218,245,.5);}
+.tide-it .tl{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
+.tide-it .tv{font-size:1rem;font-weight:700;margin-top:1px;}
+.tide-it .tt{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--cyan);margin-top:1px;}
+/* HISTORY */
+.hi{border:1px solid var(--border);padding:9px 12px;margin-bottom:6px;background:rgba(14,58,110,.2);position:relative;transition:background .2s;}
+[data-theme="light"] .hi{background:rgba(197,218,245,.4);}
+.hi:hover{background:rgba(14,58,110,.4);}
+.hib{display:inline-block;padding:1px 6px;font-family:'Space Mono',monospace;font-size:.5rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.hit{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--muted);position:absolute;top:9px;right:11px;}
+.hiT{font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:1px;}
+.hiA{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted);}
+/* NOTES */
+.nf{display:flex;flex-direction:column;gap:9px;margin-bottom:14px;}
+.nf input,.nf select,.nf textarea{background:var(--input-bg);border:1px solid var(--input-border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:.92rem;padding:8px 11px;width:100%;transition:border-color .2s;outline:none;}
+.nf input:focus,.nf select:focus,.nf textarea:focus{border-color:var(--cyan);}
+.nf select option{background:var(--deep);color:var(--text);}
+.nf textarea{resize:vertical;min-height:72px;}
+.nr{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.nlbl{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:2px;}
+.btn-p{background:var(--cyan);color:var(--navy);border:none;padding:9px 18px;font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-weight:700;transition:all .2s;align-self:flex-start;}
+.btn-p:hover{background:var(--teal);}
+.btn-ds{background:transparent;color:var(--danger);border:1px solid var(--danger);padding:3px 7px;font-family:'Space Mono',monospace;font-size:.5rem;cursor:pointer;letter-spacing:.08em;transition:all .2s;}
+.btn-ds:hover{background:rgba(230,57,70,.15);}
+.nc{background:var(--note-bg);border:1px solid rgba(0,180,216,.25);border-left:3px solid var(--cyan);padding:11px 13px;margin-bottom:7px;position:relative;transition:background .2s;}
+.nc.severo{border-left-color:var(--danger);}.nc.moderado{border-left-color:var(--warn);}.nc.menor{border-left-color:var(--gold);}.nc.info{border-left-color:var(--cyan);}
+.nc-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;gap:7px;}
+.nc-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+.nt{font-family:'Space Mono',monospace;font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border:1px solid;}
+.nt.severo{color:var(--danger);border-color:var(--danger);background:rgba(230,57,70,.1);}
+.nt.moderado{color:var(--warn);border-color:var(--warn);background:rgba(255,107,53,.1);}
+.nt.menor{color:var(--gold);border-color:var(--gold);background:rgba(255,209,102,.1);}
+.nt.info{color:var(--cyan);border-color:var(--cyan);background:rgba(0,180,216,.1);}
+.nc-time{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--muted);}
+.nc-title{font-size:.88rem;font-weight:700;margin-bottom:3px;}
+.nc-body{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.6;}
+.nc-loc{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--cyan);margin-top:3px;}
+.nca{position:absolute;top:9px;right:9px;}
+.ne{font-family:'Space Mono',monospace;font-size:.66rem;color:var(--muted);text-align:center;padding:26px;border:1px dashed var(--border);}
+.nstats{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.nst{flex:1;min-width:64px;background:rgba(14,58,110,.4);border:1px solid var(--border);padding:7px;text-align:center;}
+[data-theme="light"] .nst{background:rgba(197,218,245,.5);}
+.nst .nsv{font-size:1.3rem;font-weight:900;}
+.nst .nsl{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+/* RADAR */
+.radar-wrap{position:relative;width:100%;background:#000;border:1px solid var(--border);overflow:hidden;}
+.radar-wrap iframe{width:100%;height:460px;border:none;display:block;}
+.radar-ovl{position:absolute;top:8px;left:8px;background:rgba(10,22,40,.85);padding:4px 9px;font-family:'Space Mono',monospace;font-size:.54rem;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;pointer-events:none;}
+.rlinks{display:flex;gap:7px;margin-top:7px;flex-wrap:wrap;}
+.rlink{display:inline-block;background:rgba(14,58,110,.5);border:1px solid var(--border);padding:5px 10px;text-decoration:none;color:var(--cyan);font-family:'Space Mono',monospace;font-size:.56rem;letter-spacing:.08em;transition:all .2s;}
+.rlink:hover{background:var(--ocean);border-color:var(--cyan);}
+/* NOTIF */
+.ns-box{display:flex;align-items:center;gap:9px;padding:11px;background:rgba(14,58,110,.4);border:1px solid var(--border);margin-bottom:10px;}
+.ns-icon{font-size:1.4rem;}
+.ns-txt{flex:1;}
+.ns-txt strong{font-size:.86rem;display:block;margin-bottom:2px;}
+.ns-txt span{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted);}
+.btn-n{font-family:'Space Mono',monospace;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;cursor:pointer;border:1px solid;transition:all .2s;}
+.btn-n.enable{background:var(--safe);color:var(--navy);border-color:var(--safe);font-weight:700;}
+.btn-n.enable:hover{background:var(--teal);}
+.btn-n.disable{background:transparent;color:var(--danger);border-color:var(--danger);}
+.btn-n.disable:hover{background:rgba(230,57,70,.1);}
+.btn-n.test{background:transparent;color:var(--cyan);border-color:var(--cyan);}
+.btn-n.test:hover{background:rgba(0,180,216,.1);}
+/* MISC */
+.ribbon{position:absolute;top:10px;right:-25px;background:var(--danger);color:#fff;font-family:'Space Mono',monospace;font-size:.49rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 32px;transform:rotate(45deg);font-weight:700;display:none;}
+.btmbar{background:rgba(13,31,60,.7);border-top:1px solid var(--border);padding:9px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:7px;position:relative;z-index:5;transition:background .35s;}
+[data-theme="light"] .btmbar{background:rgba(224,236,252,.8);}
+.srcs{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.srcs .l{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;}
+.srcs a{color:var(--cyan);text-decoration:none;font-family:'Space Mono',monospace;font-size:.56rem;transition:color .2s;}
+.srcs a:hover{color:var(--teal);}
+#lu{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--muted);letter-spacing:.06em;}
+#ib{display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--ocean);border:1px solid var(--cyan);color:var(--text);padding:11px 16px;z-index:200;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+#ib p{font-size:.74rem;margin-bottom:8px;line-height:1.5;}
+#ib .br{display:flex;gap:8px;justify-content:center;}
+#ib button{font-family:'Space Mono',monospace;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;cursor:pointer;border:1px solid var(--cyan);}
+#ib #bti{background:var(--cyan);color:var(--navy);}
+#ib #btd{background:transparent;color:var(--muted);border-color:var(--border);}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:sp .8s linear infinite;margin-left:4px;vertical-align:middle;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.lt{font-family:'Space Mono',monospace;font-size:.64rem;color:var(--muted);letter-spacing:.08em;}
+/* RESPONSIVE */
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr;}.g2,.g2b{grid-template-columns:1fr;}.fcg{grid-template-columns:repeat(4,1fr);}.rg{grid-template-columns:1fr 1fr;}.main{padding:12px;}}
+@media(max-width:600px){.g3{grid-template-columns:1fr;}.fcg{grid-template-columns:repeat(3,1fr);}.nr{grid-template-columns:1fr;}.hdr{padding:9px 13px;}.main{padding:9px;}.tabs .tab{padding:8px 11px;font-size:.55rem;}.radar-wrap iframe{height:300px;}}
 </style>
 </head>
 <body>
 
-<!-- ═══════════════ HEADER ═══════════════ -->
-<header class="header">
-  <div class="header-left">
+<!-- HEADER -->
+<header class="hdr">
+  <div>
     <h1>🌀 MONITOR <span>METEORO</span>LÓGICO</h1>
-    <p>📍 Arecibo, Puerto Rico &nbsp;·&nbsp; 18.4736°N 66.7220°W &nbsp;·&nbsp; NWS San Juan</p>
+    <div class="hdr-sub">📍 Arecibo, Puerto Rico · 18.4736°N 66.7220°W · NWS San Juan</div>
   </div>
-  <div class="header-right">
+  <div class="hdr-right">
     <div id="clock">--:--:--</div>
     <div id="date-display">Cargando...</div>
-    <div class="header-btns">
-      <button class="hdr-btn" onclick="loadAllData()" id="refresh-btn">⟳ Actualizar</button>
-      <button class="hdr-btn" onclick="showInstallPrompt()" id="install-btn" style="display:none">📲 Instalar App</button>
+    <div class="hbtns">
+      <button class="hbtn" onclick="toggleTheme()" id="theme-btn">🌙 Oscuro</button>
+      <button class="hbtn" onclick="loadAllData()" id="refresh-btn">⟳ Actualizar</button>
+      <button class="hbtn" onclick="installApp()" id="install-btn" style="display:none">📲 Instalar</button>
     </div>
   </div>
 </header>
 
-<!-- ═══════════════ TABS ═══════════════ -->
+<!-- TABS -->
 <nav class="tabs">
-  <button class="tab active" onclick="switchTab('inicio')">🏠 Inicio</button>
-  <button class="tab" onclick="switchTab('alertas')">🚨 Alertas</button>
-  <button class="tab" onclick="switchTab('pronostico')">📅 Pronóstico</button>
-  <button class="tab" onclick="switchTab('maritimo')">⛵ Marítimo</button>
-  <button class="tab" onclick="switchTab('rios')">🌊 Ríos</button>
-  <button class="tab" onclick="switchTab('recursos')">🔗 Recursos</button>
+  <button class="tab active"  onclick="switchTab('inicio',this)">🏠 Inicio</button>
+  <button class="tab"         onclick="switchTab('radar',this)">📡 Radar</button>
+  <button class="tab"         onclick="switchTab('alertas',this)">🚨 Alertas</button>
+  <button class="tab"         onclick="switchTab('pronostico',this)">📅 Pronóstico</button>
+  <button class="tab"         onclick="switchTab('maritimo',this)">⛵ Marítimo</button>
+  <button class="tab"         onclick="switchTab('mareas',this)">🌊 Mareas</button>
+  <button class="tab"         onclick="switchTab('rios',this)">🏞️ Ríos</button>
+  <button class="tab"         onclick="switchTab('notas',this)">📝 Notas</button>
+  <button class="tab"         onclick="switchTab('recursos',this)">🔗 Recursos</button>
 </nav>
 
-<!-- ═══════════════ MAIN ═══════════════ -->
 <main class="main">
+<div id="alert-banner"></div>
 
-  <!-- ════════ BANNER DE ALERTAS (siempre visible) ════════ -->
-  <div id="alert-banner"></div>
-
-  <!-- ════════════════════════════════════
-       PANEL: INICIO
-  ════════════════════════════════════ -->
-  <div id="panel-inicio" class="panel active">
-
-    <div class="grid-3">
-
-      <!-- Riesgo Inundación -->
-      <div class="card teal-card" id="card-flood">
-        <div class="card-label">🌊 Riesgo Inundación Repentina</div>
-        <div class="gauge-bar">
-          <div class="gauge-fill" id="gauge-fill" style="width:0%"></div>
-        </div>
-        <div class="gauge-labels">
-          <span>BAJO</span><span>MOD.</span><span>ALTO</span><span>EXTR.</span>
-        </div>
-        <div class="risk-value" id="risk-value">—</div>
-        <div class="risk-label" id="risk-label">Evaluando...</div>
-      </div>
-
-      <!-- Lluvia hoy -->
-      <div class="card">
-        <div class="card-label">🌧️ Precipitación</div>
-        <div id="rain-info"><div class="loading-text">Cargando...<span class="spin"></span></div></div>
-      </div>
-
-      <!-- Estado general -->
-      <div class="card">
-        <div class="card-label">⚡ Estado del Sistema</div>
-        <div id="status-summary"><div class="loading-text">Evaluando...<span class="spin"></span></div></div>
-      </div>
-
-    </div>
-
-    <!-- Pronóstico rápido -->
-    <div class="card grid-1">
-      <div class="card-label">📅 Próximos 7 Días</div>
-      <div class="forecast-grid" id="forecast-grid-home">
-        <div class="loading-text" style="grid-column:1/-1">Cargando pronóstico...<span class="spin"></span></div>
-      </div>
-    </div>
-
-    <!-- Marítimo + Ríos rápidos -->
-    <div class="grid-2b">
-      <div class="card warn-card" id="card-maritime-home">
-        <div class="ribbon" id="maritime-ribbon">PELIGRO</div>
-        <div class="card-label">🌊 Condiciones Marítimas</div>
-        <table class="maritime-table" id="maritime-table-home">
-          <tr><td>Oleaje</td><td><span class="spin"></span></td></tr>
-        </table>
-      </div>
-      <div class="card teal-card">
-        <div class="card-label">🏞️ Ríos — Acceso Rápido</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-          <a href="https://water.weather.gov/ahps2/hydrograph.php?gage=AREP4&wfo=sju" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(14,58,110,.5);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-            <span style="color:var(--text);font-weight:700;font-size:.82rem">📊 Río Arecibo (AREP4)</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--teal)">→ NWS AHPS</span>
-          </a>
-          <a href="https://water.weather.gov/ahps2/hydrograph.php?gage=grap4&wfo=sju" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(14,58,110,.5);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-            <span style="color:var(--text);font-weight:700;font-size:.82rem">📊 Río Grande Arecibo</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--teal)">→ NWS AHPS</span>
-          </a>
-          <a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(14,58,110,.5);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-            <span style="color:var(--text);font-weight:700;font-size:.82rem">📈 USGS — Todos los ríos PR</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--teal)">→ USGS</span>
-          </a>
-          <a href="https://www.weather.gov/sju/ahps" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(14,58,110,.5);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-            <span style="color:var(--text);font-weight:700;font-size:.82rem">🗺️ Mapa Hidrológico NWS</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--teal)">→ NWS SJU</span>
-          </a>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /panel-inicio -->
-
-  <!-- ════════════════════════════════════
-       PANEL: ALERTAS
-  ════════════════════════════════════ -->
-  <div id="panel-alertas" class="panel">
-    <div class="card">
-      <div class="card-label">🚨 Todas las Alertas Activas — Puerto Rico</div>
-      <div id="alerts-detail-full"><div class="loading-text">Buscando alertas...<span class="spin"></span></div></div>
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════
-       PANEL: PRONÓSTICO
-  ════════════════════════════════════ -->
-  <div id="panel-pronostico" class="panel">
-    <div class="card grid-1">
-      <div class="card-label">📅 Pronóstico Detallado 7 Días — Arecibo</div>
-      <div class="forecast-grid" id="forecast-grid-full">
-        <div class="loading-text" style="grid-column:1/-1">Cargando...<span class="spin"></span></div>
-      </div>
-    </div>
-    <div class="grid-2b" style="margin-top:0">
-      <div class="card">
-        <div class="card-label">🌙 Pronóstico Nocturno</div>
-        <div id="night-forecast"><div class="loading-text">Cargando...<span class="spin"></span></div></div>
-      </div>
-      <div class="card">
-        <div class="card-label">📋 Discusión Meteorológica</div>
-        <div id="forecast-detail"><div class="loading-text">Cargando...<span class="spin"></span></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════
-       PANEL: MARÍTIMO
-  ════════════════════════════════════ -->
-  <div id="panel-maritimo" class="panel">
-    <div class="grid-2b">
-      <div class="card warn-card">
-        <div class="ribbon" id="maritime-ribbon-2">PELIGRO</div>
-        <div class="card-label">⛵ Condiciones Costa Norte PR — Aviso Actual</div>
-        <table class="maritime-table" id="maritime-table-full">
-          <tr><td>Cargando...</td><td></td></tr>
-        </table>
-        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-          <div class="sub-info">⚠️ Aviso de Embarcaciones Pequeñas Vigente</div>
-          <div class="sub-info" style="margin-top:4px">Fuente: NWS San Juan — Pronóstico Marítimo Zona AMZ712</div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-label">🌊 Boyas Cercanas — NDBC</div>
-        <div class="buoy-grid" id="buoy-grid">
-          <div class="loading-text">Cargando boyas...<span class="spin"></span></div>
-        </div>
-      </div>
+<!-- ═══ INICIO ═══ -->
+<div id="panel-inicio" class="panel active">
+  <div class="g3">
+    <div class="card tc">
+      <div class="clbl">🌊 Riesgo Inundación Repentina</div>
+      <div class="gb"><div class="gf" id="gauge-fill" style="width:0%"></div></div>
+      <div class="glbls"><span>BAJO</span><span>MOD.</span><span>ALTO</span><span>EXTR.</span></div>
+      <div class="rv" id="risk-value">—</div>
+      <div class="rl" id="risk-label">Evaluando...</div>
     </div>
     <div class="card">
-      <div class="card-label">🔗 Recursos Marítimos Oficiales</div>
-      <div class="resources-grid">
-        <a href="https://www.ndbc.noaa.gov/obs.shtml?lat=18.5&lon=-66.7&zoom=8&type=buoy&status=A" target="_blank" class="res-card">
-          <span class="res-icon">🌊</span>
-          <span class="res-name">NDBC — Boyas PR</span>
-          <span class="res-url">ndbc.noaa.gov</span>
-        </a>
-        <a href="https://www.weather.gov/sju/mz" target="_blank" class="res-card">
-          <span class="res-icon">⛵</span>
-          <span class="res-name">Pronóstico Marítimo NWS</span>
-          <span class="res-url">weather.gov/sju/mz</span>
-        </a>
-        <a href="https://tides.net/predictions?stationId=9752695" target="_blank" class="res-card">
-          <span class="res-icon">🌊</span>
-          <span class="res-name">Mareas — Arecibo</span>
-          <span class="res-url">NOAA Tides & Currents</span>
-        </a>
-        <a href="https://www.nhc.noaa.gov/" target="_blank" class="res-card">
-          <span class="res-icon">🌀</span>
-          <span class="res-name">NHC Ciclones</span>
-          <span class="res-url">nhc.noaa.gov</span>
-        </a>
-        <a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9752695" target="_blank" class="res-card">
-          <span class="res-icon">📊</span>
-          <span class="res-name">Estación Arecibo NOAA</span>
-          <span class="res-url">ID: 9752695</span>
-        </a>
-        <a href="https://coastwatch.pfeg.noaa.gov/" target="_blank" class="res-card">
-          <span class="res-icon">🛰️</span>
-          <span class="res-name">CoastWatch NOAA</span>
-          <span class="res-url">Imágenes satelitales</span>
-        </a>
-      </div>
+      <div class="clbl">🌧️ Precipitación</div>
+      <div id="rain-info"><div class="lt">Cargando...<span class="spin"></span></div></div>
     </div>
-  </div>
-
-  <!-- ════════════════════════════════════
-       PANEL: RÍOS
-  ════════════════════════════════════ -->
-  <div id="panel-rios" class="panel">
     <div class="card">
-      <div class="card-label">🏞️ Estaciones Hidrológicas — Área Arecibo / Norte PR</div>
-      <table class="rivers-table">
-        <thead>
-          <tr>
-            <th>RÍO / ESTACIÓN</th>
-            <th>CÓDIGO</th>
-            <th>ESTADO</th>
-            <th>NIVEL AHPS</th>
-            <th>VER EN VIVO</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="color:var(--text);font-weight:700">Río Arecibo</td>
-            <td>AREP4</td>
-            <td><span class="river-status" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">MONITOREO</span></td>
-            <td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=AREP4&wfo=sju" target="_blank">→ NWS AHPS</a></td>
-            <td><a href="https://waterdata.usgs.gov/monitoring-location/50029000/" target="_blank">→ USGS #50029000</a></td>
-          </tr>
-          <tr>
-            <td style="color:var(--text);font-weight:700">Río Grande de Arecibo</td>
-            <td>GRAP4</td>
-            <td><span class="river-status" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">MONITOREO</span></td>
-            <td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=grap4&wfo=sju" target="_blank">→ NWS AHPS</a></td>
-            <td><a href="https://waterdata.usgs.gov/nwis/rt?site_no=50029000" target="_blank">→ USGS Tiempo Real</a></td>
-          </tr>
-          <tr>
-            <td style="color:var(--text);font-weight:700">Río Camuy</td>
-            <td>CMAP4</td>
-            <td><span class="river-status" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">MONITOREO</span></td>
-            <td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=cmap4&wfo=sju" target="_blank">→ NWS AHPS</a></td>
-            <td><a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank">→ USGS PR</a></td>
-          </tr>
-          <tr>
-            <td style="color:var(--text);font-weight:700">Río Manati</td>
-            <td>MNTP4</td>
-            <td><span class="river-status" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">MONITOREO</span></td>
-            <td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=mntp4&wfo=sju" target="_blank">→ NWS AHPS</a></td>
-            <td><a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank">→ USGS PR</a></td>
-          </tr>
-          <tr>
-            <td style="color:var(--text);font-weight:700">Río Cibuco</td>
-            <td>CBCP4</td>
-            <td><span class="river-status" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">MONITOREO</span></td>
-            <td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=cbcp4&wfo=sju" target="_blank">→ NWS AHPS</a></td>
-            <td><a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank">→ USGS PR</a></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="grid-2b" style="margin-top:0">
-      <div class="card">
-        <div class="card-label">🗺️ Mapa Hidrológico Interactivo</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <a href="https://water.weather.gov/ahps2/index.php?wfo=sju" target="_blank" style="display:block;background:rgba(14,58,110,.5);border:1px solid var(--border);padding:14px;text-decoration:none;color:var(--text);transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:1.3rem;margin-bottom:4px">🗺️</div>
-            <div style="font-weight:700;font-size:.85rem">NWS AHPS — Mapa Puerto Rico</div>
-            <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:2px">Todas las estaciones en tiempo real</div>
-          </a>
-          <a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank" style="display:block;background:rgba(14,58,110,.5);border:1px solid var(--border);padding:14px;text-decoration:none;color:var(--text);transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:1.3rem;margin-bottom:4px">📈</div>
-            <div style="font-weight:700;font-size:.85rem">USGS — Ríos Puerto Rico</div>
-            <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:2px">Datos de flujo en tiempo real</div>
-          </a>
-        </div>
-      </div>
-      <div class="card danger-card">
-        <div class="card-label">⚠️ Señales de Peligro en Ríos</div>
-        <div style="display:flex;flex-direction:column;gap:8px;font-family:'Space Mono',monospace;font-size:.64rem;line-height:1.7">
-          <div style="padding:8px;background:rgba(230,57,70,.1);border-left:3px solid var(--danger)">
-            🔴 <strong style="color:var(--danger)">FLOOD STAGE:</strong> Nivel que causa inundaciones en áreas bajas
-          </div>
-          <div style="padding:8px;background:rgba(255,107,53,.1);border-left:3px solid var(--warn)">
-            🟠 <strong style="color:var(--warn)">ACTION STAGE:</strong> Monitoreo intensivo requerido
-          </div>
-          <div style="padding:8px;background:rgba(255,209,102,.1);border-left:3px solid var(--gold)">
-            🟡 <strong style="color:var(--gold)">MINOR FLOOD:</strong> Inundaciones menores posibles
-          </div>
-          <div style="padding:8px;background:rgba(6,214,160,.1);border-left:3px solid var(--safe)">
-            🟢 <strong style="color:var(--safe)">NORMAL:</strong> Nivel dentro de parámetros seguros
-          </div>
-          <div style="color:var(--muted);padding-top:4px">
-            ⚡ Flash floods pueden desarrollarse en minutos. No cruce ríos crecidos.
-          </div>
-        </div>
-      </div>
+      <div class="clbl">⚡ Estado del Sistema</div>
+      <div id="status-summary"><div class="lt">Evaluando...<span class="spin"></span></div></div>
     </div>
   </div>
-
-  <!-- ════════════════════════════════════
-       PANEL: RECURSOS
-  ════════════════════════════════════ -->
-  <div id="panel-recursos" class="panel">
-    <div class="grid-2b">
-      <div class="card">
-        <div class="card-label">📞 Contactos de Emergencia</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.3)">
-            <span style="font-weight:700;font-size:.9rem">🆘 Emergencias PR</span>
-            <span style="font-family:'Space Mono',monospace;font-size:1.1rem;color:var(--danger);font-weight:700">9-1-1</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(14,58,110,.4);border:1px solid var(--border)">
-            <span style="font-weight:700;font-size:.85rem">🌀 NWS San Juan</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.85rem;color:var(--cyan)">(787) 253-4586</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(14,58,110,.4);border:1px solid var(--border)">
-            <span style="font-weight:700;font-size:.85rem">🚒 SCEM Puerto Rico</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.85rem;color:var(--cyan)">(787) 724-0124</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(14,58,110,.4);border:1px solid var(--border)">
-            <span style="font-weight:700;font-size:.85rem">🛣️ DTOP Carreteras</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.85rem;color:var(--cyan)">(787) 723-3600</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(14,58,110,.4);border:1px solid var(--border)">
-            <span style="font-weight:700;font-size:.85rem">🏥 Cruz Roja PR</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.85rem;color:var(--cyan)">(787) 759-7979</span>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-label">📱 Alertas en tu Celular</div>
-        <div style="display:flex;flex-direction:column;gap:8px;font-family:'Space Mono',monospace;font-size:.63rem;line-height:1.8">
-          <div style="padding:10px;background:rgba(14,58,110,.4);border:1px solid var(--border)">
-            <div style="color:var(--cyan);font-weight:700;margin-bottom:4px">📧 EMAIL — NWS Alerts</div>
-            <a href="https://www.weather.gov/alerts" target="_blank" style="color:var(--teal)">weather.gov/alerts → Puerto Rico</a><br>
-            <span style="color:var(--muted)">Suscribirse gratis a Flash Flood, Marine, Surf</span>
-          </div>
-          <div style="padding:10px;background:rgba(14,58,110,.4);border:1px solid var(--border)">
-            <div style="color:var(--cyan);font-weight:700;margin-bottom:4px">📲 WEA — Alertas Inalámbricas</div>
-            <span style="color:var(--muted)">Activar en: Configuración → Notificaciones → Alertas de Emergencia</span>
-          </div>
-          <div style="padding:10px;background:rgba(14,58,110,.4);border:1px solid var(--border)">
-            <div style="color:var(--cyan);font-weight:700;margin-bottom:4px">🐦 NWS en Redes</div>
-            <span style="color:var(--muted)">X/Twitter: </span><a href="https://twitter.com/NWSSanJuan" target="_blank" style="color:var(--teal)">@NWSSanJuan</a><br>
-            <span style="color:var(--muted)">Facebook: </span><a href="https://facebook.com/NWSSanJuan" target="_blank" style="color:var(--teal)">NWS San Juan</a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">🔗 Todos los Recursos Oficiales</div>
-      <div class="resources-grid">
-        <a href="https://www.weather.gov/sju/" target="_blank" class="res-card">
-          <span class="res-icon">🌀</span><span class="res-name">NWS San Juan</span><span class="res-url">weather.gov/sju</span>
-        </a>
-        <a href="https://api.weather.gov/alerts/active?area=PR" target="_blank" class="res-card">
-          <span class="res-icon">⚡</span><span class="res-name">API Alertas NWS</span><span class="res-url">Datos en tiempo real JSON</span>
-        </a>
-        <a href="https://water.weather.gov/ahps2/index.php?wfo=sju" target="_blank" class="res-card">
-          <span class="res-icon">🏞️</span><span class="res-name">AHPS Hidrología</span><span class="res-url">Ríos PR en tiempo real</span>
-        </a>
-        <a href="https://www.nhc.noaa.gov/" target="_blank" class="res-card">
-          <span class="res-icon">🌀</span><span class="res-name">NHC Ciclones</span><span class="res-url">nhc.noaa.gov</span>
-        </a>
-        <a href="https://www.ndbc.noaa.gov/" target="_blank" class="res-card">
-          <span class="res-icon">🌊</span><span class="res-name">NDBC Boyas</span><span class="res-url">ndbc.noaa.gov</span>
-        </a>
-        <a href="https://www.spcpr.pr.gov/" target="_blank" class="res-card">
-          <span class="res-icon">🚒</span><span class="res-name">SCEM PR</span><span class="res-url">Manejo de Emergencias</span>
-        </a>
-        <a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank" class="res-card">
-          <span class="res-icon">📈</span><span class="res-name">USGS Ríos PR</span><span class="res-url">waterdata.usgs.gov</span>
-        </a>
-        <a href="https://www.dtop.pr.gov/" target="_blank" class="res-card">
-          <span class="res-icon">🛣️</span><span class="res-name">DTOP Carreteras</span><span class="res-url">Cierres y condiciones viales</span>
-        </a>
-        <a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9752695" target="_blank" class="res-card">
-          <span class="res-icon">🌊</span><span class="res-name">Mareas Arecibo</span><span class="res-url">NOAA — ID 9752695</span>
-        </a>
-      </div>
-    </div>
+  <div class="card g1">
+    <div class="clbl">📅 Próximos 7 Días</div>
+    <div class="fcg" id="fcg-home"><div class="lt" style="grid-column:1/-1">Cargando...<span class="spin"></span></div></div>
   </div>
-
-</main>
-
-<!-- ═══════════════ BOTTOM BAR ═══════════════ -->
-<footer class="bottom-bar">
-  <div class="sources">
-    <span class="lbl">Fuentes:</span>
-    <a href="https://api.weather.gov/" target="_blank">NWS API</a>
-    <a href="https://www.ndbc.noaa.gov/" target="_blank">NDBC</a>
-    <a href="https://water.weather.gov/" target="_blank">AHPS</a>
-    <a href="https://waterdata.usgs.gov/" target="_blank">USGS</a>
-  </div>
-  <div id="last-updated">Cargando...</div>
-</footer>
-
-<!-- ═══════════════ PWA INSTALL BANNER ═══════════════ -->
-<div id="install-banner">
-  <p>📲 <strong>Instala esta app en tu celular</strong><br>Accede al monitor sin abrir el navegador</p>
-  <div class="btn-row">
-    <button id="btn-install" onclick="installApp()">Instalar</button>
-    <button id="btn-dismiss" onclick="document.getElementById('install-banner').style.display='none'">Ahora no</button>
+  <div class="g2b">
+    <div class="card wc">
+      <div class="ribbon" id="mr1">PELIGRO</div>
+      <div class="clbl">🌊 Condiciones Marítimas</div>
+      <table class="mt" id="mt-home"><tr><td>Cargando...</td><td></td></tr></table>
+    </div>
+    <div class="card gc">
+      <div class="clbl">🌊 Mareas Hoy — Arecibo</div>
+      <div id="tides-home"><div class="lt">Calculando...<span class="spin"></span></div></div>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════════ SCRIPTS ═══════════════ -->
-<script>
-// ════════════════════════════════════
-// RELOJ
-// ════════════════════════════════════
-function updateClock() {
-  const now = new Date();
-  const opt = { timeZone:'America/Puerto_Rico' };
-  document.getElementById('clock').textContent =
-    now.toLocaleTimeString('es-PR', {...opt, hour12:true}).toUpperCase();
-  document.getElementById('date-display').textContent =
-    now.toLocaleDateString('es-PR', {...opt, weekday:'long', year:'numeric', month:'long', day:'numeric'}).toUpperCase();
-}
-setInterval(updateClock, 1000);
-updateClock();
+<!-- ═══ RADAR ═══ -->
+<div id="panel-radar" class="panel">
+  <div class="card g1">
+    <div class="clbl">📡 Radar NWS TJUA — Loop Últimas 2 Horas</div>
+    <div class="radar-wrap">
+      <div class="radar-ovl">📡 NWS RADAR TJUA · ARECIBO, PR</div>
+      <iframe src="https://radar.weather.gov/station/TJUA/standard" title="Radar NWS San Juan" loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <div class="rlinks">
+      <a href="https://radar.weather.gov/station/TJUA/standard" target="_blank" class="rlink">🔗 Radar Completo</a>
+      <a href="https://radar.weather.gov/station/TJUA/loop" target="_blank" class="rlink">▶ Loop Animado</a>
+      <a href="https://www.tropicaltidbits.com/analysis/radar/?region=pr" target="_blank" class="rlink">🌐 TropicalTidbits</a>
+      <a href="https://www.weather.gov/sju/" target="_blank" class="rlink">🌀 NWS San Juan</a>
+    </div>
+  </div>
+  <div class="g2b">
+    <div class="card">
+      <div class="clbl">🛰️ Satélite GOES-16 — Puerto Rico</div>
+      <div class="radar-wrap">
+        <iframe src="https://www.star.nesdis.noaa.gov/GOES/sector_mosaic.php?sector=pr&band=GEOCOLOR&length=12" title="Satélite GOES PR" loading="lazy" style="height:280px" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+      </div>
+      <div class="rlinks">
+        <a href="https://www.star.nesdis.noaa.gov/GOES/sector.php?sat=G16&sector=pr" target="_blank" class="rlink">🛰️ GOES-16 PR Completo</a>
+      </div>
+    </div>
+    <div class="card">
+      <div class="clbl">💡 Cómo Leer el Radar</div>
+      <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);line-height:2">
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">🟢 <span style="color:var(--safe)">VERDE</span> — Lluvia leve (0–20 dBZ)</div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">🟡 <span style="color:var(--gold)">AMARILLO</span> — Lluvia moderada (20–40 dBZ)</div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">🟠 <span style="color:var(--warn)">NARANJA</span> — Lluvia intensa (40–55 dBZ)</div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">🔴 <span style="color:var(--danger)">ROJO</span> — Lluvia muy intensa (55+ dBZ)</div>
+        <div style="padding:5px 0">⚫ <span style="color:var(--text)">MAGENTA</span> — Granizo posible (65+ dBZ)</div>
+        <div style="margin-top:8px;padding:7px;background:rgba(0,180,216,.07);border-left:2px solid var(--cyan);font-size:.58rem">⚠️ Vigilar celdas rojo/naranja que se mueven hacia cuencas de ríos. Son las que generan Flash Floods.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-// ════════════════════════════════════
-// TABS
-// ════════════════════════════════════
-function switchTab(name) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
-}
+<!-- ═══ ALERTAS ═══ -->
+<div id="panel-alertas" class="panel">
+  <div class="g2b">
+    <div class="card">
+      <div class="clbl">🚨 Alertas Activas — Puerto Rico</div>
+      <div id="alerts-full"><div class="lt">Buscando...<span class="spin"></span></div></div>
+    </div>
+    <div class="card gc">
+      <div class="clbl">📋 Historial de Alertas (Sesión)</div>
+      <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted)">ÚLTIMAS 50 ALERTAS REGISTRADAS</span>
+        <button class="btn-ds" onclick="clearHistory()">🗑 Limpiar</button>
+      </div>
+      <div id="alert-history"><div class="ne">Sin historial aún.</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="clbl">🔔 Notificaciones Push</div>
+    <div class="ns-box" id="ns-box">
+      <div class="ns-icon">🔕</div>
+      <div class="ns-txt"><strong id="ns-title">Notificaciones no activadas</strong><span id="ns-desc">Activa para recibir alertas aunque el dashboard esté cerrado</span></div>
+      <button class="btn-n enable" id="ns-btn" onclick="toggleNotif()">Activar</button>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn-n test" onclick="testNotif()">🔔 Enviar Prueba</button>
+    </div>
+    <div style="margin-top:10px;font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:1.8;padding:9px;background:rgba(0,180,216,.05);border:1px solid var(--border)">
+      ⚠️ <strong style="color:var(--gold)">Cómo funciona:</strong> Se verifica la API del NWS cada 10 minutos. Si hay nueva alerta Flash Flood o Severe, recibirás notificación inmediata. El navegador debe estar abierto en segundo plano (o instalar como app PWA).
+    </div>
+  </div>
+</div>
 
-// ════════════════════════════════════
-// PWA INSTALL
-// ════════════════════════════════════
-let deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById('install-btn').style.display = 'block';
-  setTimeout(() => { document.getElementById('install-banner').style.display = 'block'; }, 3000);
-});
-function showInstallPrompt() { if (deferredPrompt) installApp(); }
-function installApp() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(() => {
-    deferredPrompt = null;
-    document.getElementById('install-banner').style.display = 'none';
-    document.getElementById('install-btn').style.display = 'none';
-  });
-}
+<!-- ═══ PRONÓSTICO ═══ -->
+<div id="panel-pronostico" class="panel">
+  <div class="card g1">
+    <div class="clbl">📅 Pronóstico Detallado 7 Días — Arecibo</div>
+    <div class="fcg" id="fcg-full"><div class="lt" style="grid-column:1/-1">Cargando...<span class="spin"></span></div></div>
+  </div>
+  <div class="g2b">
+    <div class="card"><div class="clbl">🌙 Pronóstico Nocturno</div><div id="night-fc"><div class="lt">Cargando...<span class="spin"></span></div></div></div>
+    <div class="card"><div class="clbl">📋 Detalle Próximos Días</div><div id="fc-detail"><div class="lt">Cargando...<span class="spin"></span></div></div></div>
+  </div>
+</div>
 
-// ════════════════════════════════════
-// ALERTAS NWS
-// ════════════════════════════════════
-async function loadAlerts() {
-  try {
-    const res = await fetch('https://api.weather.gov/alerts/active?area=PR&limit=25');
-    const data = await res.json();
-    const alerts = data.features || [];
+<!-- ═══ MARÍTIMO ═══ -->
+<div id="panel-maritimo" class="panel">
+  <div class="g2b">
+    <div class="card wc">
+      <div class="ribbon" id="mr2">PELIGRO</div>
+      <div class="clbl">⛵ Costa Norte PR — Aviso Actual</div>
+      <table class="mt" id="mt-full"></table>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--border)">
+        <div class="subinfo">⚠️ Small Craft Advisory — Zona AMZ712 · NWS San Juan</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="clbl">🌊 Boyas Cercanas — NDBC</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="background:rgba(14,58,110,.4);border:1px solid var(--border);padding:10px">
+          <div style="font-weight:700;font-size:.78rem;color:var(--cyan);margin-bottom:4px">🔴 Boya 41053 — San Juan</div>
+          <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:1.8">Oleaje: <strong style="color:var(--text)">~2.8 m</strong> · Viento: <strong style="color:var(--text)">E 18 kt</strong><br>Temp. Agua: <strong style="color:var(--text)">~27°C</strong><br><a href="https://www.ndbc.noaa.gov/station_page.php?station=41053" target="_blank" style="color:var(--cyan)">→ Datos en vivo NDBC</a></div>
+        </div>
+        <div style="background:rgba(14,58,110,.4);border:1px solid var(--border);padding:10px">
+          <div style="font-weight:700;font-size:.78rem;color:var(--gold);margin-bottom:4px">🟡 BEPB4 — Isla de Pájaros</div>
+          <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:1.8">Más cercana a Arecibo · Costa norte PR<br><a href="https://www.ndbc.noaa.gov/station_page.php?station=bepb4" target="_blank" style="color:var(--cyan)">→ Datos en vivo NDBC</a></div>
+        </div>
+        <div style="background:rgba(14,58,110,.4);border:1px solid var(--border);padding:10px">
+          <div style="font-weight:700;font-size:.78rem;color:var(--gold);margin-bottom:4px">🟡 Boya 41047 — Atlántico N</div>
+          <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:1.8">Oleaje: <strong style="color:var(--text)">~2.5 m</strong> · Período: <strong style="color:var(--text)">~9 seg.</strong><br><a href="https://www.ndbc.noaa.gov/station_page.php?station=41047" target="_blank" style="color:var(--cyan)">→ Datos en vivo NDBC</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="clbl">🔗 Recursos Marítimos</div>
+    <div class="rg">
+      <a href="https://www.ndbc.noaa.gov/obs.shtml?lat=18.5&lon=-66.7&zoom=8&type=buoy" target="_blank" class="rc"><span class="ri">🌊</span><span class="rn">NDBC Boyas PR</span><span class="ru">ndbc.noaa.gov</span></a>
+      <a href="https://www.weather.gov/sju/mz" target="_blank" class="rc"><span class="ri">⛵</span><span class="rn">Pronóstico Marítimo</span><span class="ru">weather.gov/sju/mz</span></a>
+      <a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9752695" target="_blank" class="rc"><span class="ri">🌊</span><span class="rn">Mareas Arecibo</span><span class="ru">NOAA ID: 9752695</span></a>
+      <a href="https://www.nhc.noaa.gov/" target="_blank" class="rc"><span class="ri">🌀</span><span class="rn">NHC Ciclones</span><span class="ru">nhc.noaa.gov</span></a>
+      <a href="https://coastwatch.pfeg.noaa.gov/" target="_blank" class="rc"><span class="ri">🛰️</span><span class="rn">CoastWatch NOAA</span><span class="ru">Imágenes satélite</span></a>
+      <a href="https://www.weather.gov/sju/" target="_blank" class="rc"><span class="ri">🌀</span><span class="rn">NWS San Juan</span><span class="ru">weather.gov/sju</span></a>
+    </div>
+  </div>
+</div>
 
-    // Banner (siempre visible)
-    const banner = document.getElementById('alert-banner');
-    if (alerts.length > 0) {
-      banner.style.display = 'block';
-      banner.innerHTML = alerts.slice(0,4).map(a => {
-        const p = a.properties;
-        const sev = p.severity;
-        let cls = 'advisory';
-        if (sev==='Extreme'||sev==='Severe') cls='';
-        else if (sev==='Moderate') cls='warn';
-        const expires = p.expires
-          ? new Date(p.expires).toLocaleString('es-PR',{timeZone:'America/Puerto_Rico',weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
-          : 'Vigente';
-        const desc = (p.headline||p.description||'').substring(0,240);
-        return `<div class="alert-item ${cls}">
-          <div class="alert-header">
-            <span class="alert-type">⚠️ ${p.event||'Alerta'}</span>
-            <span class="alert-expires">Expira: ${expires}</span>
+<!-- ═══ MAREAS ═══ -->
+<div id="panel-mareas" class="panel">
+  <div class="g2b">
+    <div class="card gc">
+      <div class="clbl">🌊 Mareas Hoy — Estación Arecibo (NOAA #9752695)</div>
+      <div id="tides-full"><div class="lt">Calculando...<span class="spin"></span></div></div>
+    </div>
+    <div class="card">
+      <div class="clbl">ℹ️ Sobre las Mareas en Arecibo</div>
+      <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.9">
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">📍 <strong style="color:var(--text)">Estación:</strong> Arecibo, PR — ID 9752695</div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">🌊 <strong style="color:var(--text)">Tipo:</strong> Marea mixta semidiurna</div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">📏 <strong style="color:var(--text)">Rango típico:</strong> 0.3 – 0.6 metros</div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">⚠️ <strong style="color:var(--warn)">Marea de tormenta:</strong> +1-2m adicionales en huracanes</div>
+        <div style="padding:5px 0">🔗 <a href="https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=9752695" target="_blank" style="color:var(--cyan)">→ Predicciones oficiales NOAA</a></div>
+        <div style="margin-top:8px;padding:7px;background:rgba(255,209,102,.08);border-left:2px solid var(--gold);font-size:.58rem">Mareas altas + oleaje fuerte aumentan riesgo de inundación costera en la zona norte de Arecibo.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="clbl">📅 Predicciones Oficiales NOAA — Próximos Días</div>
+    <div style="text-align:center;padding:18px">
+      <p style="font-family:'Space Mono',monospace;font-size:.63rem;color:var(--muted);line-height:1.8;margin-bottom:12px">Para predicciones precisas de los próximos días, consulta la fuente oficial de NOAA Tides &amp; Currents:</p>
+      <a href="https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=9752695&units=standard&timezone=LST/LDT&clock=12hour&datum=MLLW&interval=hilo&action=dailychart" target="_blank" style="display:inline-block;background:var(--gold);color:var(--navy);padding:11px 22px;text-decoration:none;font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:all .2s">
+        🌊 NOAA TIDES — ESTACIÓN ARECIBO →
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RÍOS ═══ -->
+<div id="panel-rios" class="panel">
+  <div class="card g1">
+    <div class="clbl">🏞️ Estaciones Hidrológicas — Norte PR</div>
+    <table class="rt">
+      <thead><tr><th>RÍO</th><th>CÓDIGO</th><th>ESTADO</th><th>NWS AHPS</th><th>USGS</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--text);font-weight:700">Río Arecibo</td><td>AREP4</td><td><span class="rs" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">ACTIVO</span></td><td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=AREP4&wfo=sju" target="_blank">→ Hidrograma</a></td><td><a href="https://waterdata.usgs.gov/monitoring-location/50029000/" target="_blank">→ #50029000</a></td></tr>
+        <tr><td style="color:var(--text);font-weight:700">Río Grande Arecibo</td><td>GRAP4</td><td><span class="rs" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">ACTIVO</span></td><td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=grap4&wfo=sju" target="_blank">→ Hidrograma</a></td><td><a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank">→ USGS PR</a></td></tr>
+        <tr><td style="color:var(--text);font-weight:700">Río Camuy</td><td>CMAP4</td><td><span class="rs" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">ACTIVO</span></td><td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=cmap4&wfo=sju" target="_blank">→ Hidrograma</a></td><td><a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank">→ USGS PR</a></td></tr>
+        <tr><td style="color:var(--text);font-weight:700">Río Manatí</td><td>MNTP4</td><td><span class="rs" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">ACTIVO</span></td><td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=mntp4&wfo=sju" target="_blank">→ Hidrograma</a></td><td><a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank">→ USGS PR</a></td></tr>
+        <tr><td style="color:var(--text);font-weight:700">Río Cibuco</td><td>CBCP4</td><td><span class="rs" style="background:rgba(0,180,216,.15);color:var(--cyan);border:1px solid var(--cyan)">ACTIVO</span></td><td><a href="https://water.weather.gov/ahps2/hydrograph.php?gage=cbcp4&wfo=sju" target="_blank">→ Hidrograma</a></td><td><a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank">→ USGS PR</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="g2b">
+    <div class="card">
+      <div class="clbl">🗺️ Mapas Hidrológicos</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <a href="https://water.weather.gov/ahps2/index.php?wfo=sju" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(14,58,110,.5);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'"><span style="color:var(--text);font-weight:700;font-size:.82rem">🗺️ NWS AHPS — Mapa PR</span><span style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--teal)">→</span></a>
+        <a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(14,58,110,.5);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'"><span style="color:var(--text);font-weight:700;font-size:.82rem">📈 USGS Flujo Tiempo Real</span><span style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--teal)">→</span></a>
+        <a href="https://www.weather.gov/sju/ahps" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(14,58,110,.5);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'"><span style="color:var(--text);font-weight:700;font-size:.82rem">📊 Hidrología NWS SJU</span><span style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--teal)">→</span></a>
+      </div>
+    </div>
+    <div class="card dc">
+      <div class="clbl">⚠️ Señales de Peligro</div>
+      <div style="font-family:'Space Mono',monospace;font-size:.6rem;line-height:1.7;display:flex;flex-direction:column;gap:5px">
+        <div style="padding:6px;background:rgba(230,57,70,.1);border-left:3px solid var(--danger)">🔴 <strong style="color:var(--danger)">FLOOD STAGE</strong> — Inundación activa</div>
+        <div style="padding:6px;background:rgba(255,107,53,.1);border-left:3px solid var(--warn)">🟠 <strong style="color:var(--warn)">ACTION STAGE</strong> — Monitoreo intensivo</div>
+        <div style="padding:6px;background:rgba(255,209,102,.1);border-left:3px solid var(--gold)">🟡 <strong style="color:var(--gold)">MINOR FLOOD</strong> — Inundaciones menores</div>
+        <div style="padding:6px;background:rgba(6,214,160,.1);border-left:3px solid var(--safe)">🟢 <strong style="color:var(--safe)">NORMAL</strong> — Nivel seguro</div>
+        <div style="color:var(--muted);padding-top:3px;font-size:.56rem">⚡ No cruce ríos crecidos. 6 pulgadas de agua en movimiento pueden derribar a una persona.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NOTAS ═══ -->
+<div id="panel-notas" class="panel">
+  <div class="g2b">
+    <div class="card">
+      <div class="clbl">✏️ Nueva Observación de Campo</div>
+      <div class="nf">
+        <div class="nr">
+          <div><div class="nlbl">Tipo de evento</div>
+            <select id="note-type">
+              <option value="info">📋 Observación General</option>
+              <option value="menor">🟡 Evento Menor</option>
+              <option value="moderado">🟠 Evento Moderado</option>
+              <option value="severo">🔴 Evento Severo</option>
+            </select>
           </div>
-          <div class="alert-title">${p.headline ? p.headline.split('*')[0].trim().substring(0,90) : p.event}</div>
-          <div class="alert-desc">${desc}${(p.headline||p.description||'').length>240?'...':''}</div>
-        </div>`;
-      }).join('');
-    } else {
-      banner.style.display = 'none';
-    }
+          <div><div class="nlbl">Ubicación</div>
+            <input type="text" id="note-loc" placeholder="Ej: Río Arecibo, Km 3.2" maxlength="80">
+          </div>
+        </div>
+        <div><div class="nlbl">Título / Resumen</div>
+          <input type="text" id="note-title" placeholder="Ej: Río desbordado en margen norte" maxlength="120">
+        </div>
+        <div><div class="nlbl">Descripción detallada</div>
+          <textarea id="note-body" placeholder="Describe condiciones: nivel del agua, área afectada, infraestructura dañada, personas afectadas, acciones tomadas..."></textarea>
+        </div>
+        <button class="btn-p" onclick="saveNote()">💾 Guardar Observación</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="clbl">📊 Estadísticas</div>
+      <div class="nstats">
+        <div class="nst"><div class="nsv" id="ns-total">0</div><div class="nsl">Total</div></div>
+        <div class="nst"><div class="nsv" style="color:var(--danger)" id="ns-sev">0</div><div class="nsl">Severos</div></div>
+        <div class="nst"><div class="nsv" style="color:var(--warn)" id="ns-mod">0</div><div class="nsl">Moderados</div></div>
+        <div class="nst"><div class="nsv" style="color:var(--cyan)" id="ns-inf">0</div><div class="nsl">Info</div></div>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn-p" onclick="exportNotes()" style="background:var(--ocean);color:var(--cyan);border:1px solid var(--cyan)">📤 Exportar TXT</button>
+        <button class="btn-ds" onclick="clearNotes()" style="color:var(--muted);border-color:var(--muted)">🗑 Borrar todas</button>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:1.8;padding:8px;background:rgba(0,180,216,.05);border:1px solid var(--border)">
+        💾 Las notas se guardan en el navegador (localStorage). Permanecen al cerrar el dashboard. Usa "Exportar" para respaldo externo.
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:7px">
+      <div class="clbl" style="margin-bottom:0">📝 Bitácora de Observaciones</div>
+      <select id="filter-type" onchange="renderNotes()" style="background:var(--input-bg);border:1px solid var(--input-border);color:var(--text);font-family:'Space Mono',monospace;font-size:.54rem;padding:4px 7px;">
+        <option value="">Todos los tipos</option>
+        <option value="severo">🔴 Severo</option>
+        <option value="moderado">🟠 Moderado</option>
+        <option value="menor">🟡 Menor</option>
+        <option value="info">📋 Info</option>
+      </select>
+    </div>
+    <div id="notes-list"><div class="ne">Sin observaciones aún. Usa el formulario para registrar tu primera nota de campo.</div></div>
+  </div>
+</div>
 
-    // Panel alertas completo
-    const detail = document.getElementById('alerts-detail-full');
-    if (alerts.length===0) {
-      detail.innerHTML = `<div class="status-indicator"><span class="dot safe"></span><span style="color:var(--safe)">SIN ALERTAS ACTIVAS PARA PUERTO RICO</span></div>
-        <div class="sub-info" style="margin-top:10px">No hay alertas meteorológicas vigentes en este momento. Siempre verifique weather.gov/sju para la información más reciente.</div>`;
-    } else {
-      detail.innerHTML = `<div style="margin-bottom:12px;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--muted)">${alerts.length} ALERTA${alerts.length>1?'S':''} ACTIVA${alerts.length>1?'S':''}</div>` +
-        alerts.map(a => {
-          const p = a.properties;
-          const sev = p.severity;
-          let color = 'var(--gold)';
-          if (sev==='Extreme') color='var(--danger)';
-          else if (sev==='Severe') color='var(--warn)';
-          const exp = p.expires ? new Date(p.expires).toLocaleString('es-PR',{timeZone:'America/Puerto_Rico',weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-          const desc = (p.description||'').substring(0,400);
-          return `<div style="border:1px solid var(--border);padding:14px;margin-bottom:10px;background:rgba(14,58,110,.25)">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-              <span style="font-weight:700;font-size:.9rem;color:${color};letter-spacing:.04em;text-transform:uppercase">${p.event}</span>
-              <span style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted)">Expira: ${exp}</span>
-            </div>
-            <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);margin-bottom:8px">📍 ${(p.areaDesc||'').split(';').slice(0,3).join(' • ')}</div>
-            ${desc ? `<div style="font-family:'Space Mono',monospace;font-size:.62rem;color:var(--text);line-height:1.6">${desc}${(p.description||'').length>400?'...':''}</div>` : ''}
-          </div>`;
-        }).join('');
-    }
+<!-- ═══ RECURSOS ═══ -->
+<div id="panel-recursos" class="panel">
+  <div class="g2b">
+    <div class="card">
+      <div class="clbl">📞 Contactos de Emergencia</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <a href="tel:911" style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(230,57,70,.12);border:1px solid rgba(230,57,70,.3);text-decoration:none"><span style="color:var(--text);font-weight:700">🆘 Emergencias PR</span><span style="font-family:'Space Mono',monospace;font-size:1.1rem;color:var(--danger);font-weight:700">9-1-1</span></a>
+        <a href="tel:7872534586" style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(14,58,110,.4);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)'"><span style="color:var(--text);font-weight:700">🌀 NWS San Juan</span><span style="font-family:'Space Mono',monospace;font-size:.82rem;color:var(--cyan)">(787) 253-4586</span></a>
+        <a href="tel:7877240124" style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(14,58,110,.4);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)'"><span style="color:var(--text);font-weight:700">🚒 SCEM Puerto Rico</span><span style="font-family:'Space Mono',monospace;font-size:.82rem;color:var(--cyan)">(787) 724-0124</span></a>
+        <a href="tel:7877233600" style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(14,58,110,.4);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)'"><span style="color:var(--text);font-weight:700">🛣️ DTOP</span><span style="font-family:'Space Mono',monospace;font-size:.82rem;color:var(--cyan)">(787) 723-3600</span></a>
+        <a href="tel:7877597979" style="display:flex;justify-content:space-between;align-items:center;padding:9px;background:rgba(14,58,110,.4);border:1px solid var(--border);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)'"><span style="color:var(--text);font-weight:700">🏥 Cruz Roja PR</span><span style="font-family:'Space Mono',monospace;font-size:.82rem;color:var(--cyan)">(787) 759-7979</span></a>
+      </div>
+    </div>
+    <div class="card">
+      <div class="clbl">📱 Alertas en tu Dispositivo</div>
+      <div style="display:flex;flex-direction:column;gap:7px;font-family:'Space Mono',monospace;font-size:.6rem;line-height:1.8">
+        <div style="padding:9px;background:rgba(14,58,110,.4);border:1px solid var(--border)"><div style="color:var(--cyan);font-weight:700;margin-bottom:2px">📧 Alertas por Email — NWS</div><a href="https://www.weather.gov/alerts" target="_blank" style="color:var(--teal)">weather.gov/alerts → Puerto Rico</a><br><span style="color:var(--muted)">Flash Flood · Marine · Surf · Tropical</span></div>
+        <div style="padding:9px;background:rgba(14,58,110,.4);border:1px solid var(--border)"><div style="color:var(--cyan);font-weight:700;margin-bottom:2px">📲 WEA — Alertas Inalámbricas</div><span style="color:var(--muted)">Configuración → Notificaciones → Alertas de Emergencia</span></div>
+        <div style="padding:9px;background:rgba(14,58,110,.4);border:1px solid var(--border)"><div style="color:var(--cyan);font-weight:700;margin-bottom:2px">🐦 NWS en Redes</div><a href="https://twitter.com/NWSSanJuan" target="_blank" style="color:var(--teal)">@NWSSanJuan</a><span style="color:var(--muted)"> · </span><a href="https://facebook.com/NWSSanJuan" target="_blank" style="color:var(--teal)">Facebook NWS SJU</a></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="clbl">🔗 Todos los Recursos Oficiales</div>
+    <div class="rg">
+      <a href="https://www.weather.gov/sju/" target="_blank" class="rc"><span class="ri">🌀</span><span class="rn">NWS San Juan</span><span class="ru">weather.gov/sju</span></a>
+      <a href="https://api.weather.gov/alerts/active?area=PR" target="_blank" class="rc"><span class="ri">⚡</span><span class="rn">API Alertas NWS</span><span class="ru">Datos JSON tiempo real</span></a>
+      <a href="https://water.weather.gov/ahps2/index.php?wfo=sju" target="_blank" class="rc"><span class="ri">🏞️</span><span class="rn">AHPS Hidrología</span><span class="ru">Ríos PR tiempo real</span></a>
+      <a href="https://radar.weather.gov/station/TJUA/standard" target="_blank" class="rc"><span class="ri">📡</span><span class="rn">Radar TJUA</span><span class="ru">NWS San Juan</span></a>
+      <a href="https://www.nhc.noaa.gov/" target="_blank" class="rc"><span class="ri">🌀</span><span class="rn">NHC Ciclones</span><span class="ru">nhc.noaa.gov</span></a>
+      <a href="https://www.ndbc.noaa.gov/" target="_blank" class="rc"><span class="ri">🌊</span><span class="rn">NDBC Boyas</span><span class="ru">ndbc.noaa.gov</span></a>
+      <a href="https://waterdata.usgs.gov/pr/nwis/rt" target="_blank" class="rc"><span class="ri">📈</span><span class="rn">USGS Ríos PR</span><span class="ru">Flujo tiempo real</span></a>
+      <a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9752695" target="_blank" class="rc"><span class="ri">🌊</span><span class="rn">Mareas Arecibo</span><span class="ru">NOAA ID 9752695</span></a>
+      <a href="https://www.spcpr.pr.gov/" target="_blank" class="rc"><span class="ri">🚒</span><span class="rn">SCEM PR</span><span class="ru">spcpr.pr.gov</span></a>
+    </div>
+  </div>
+</div>
 
-    computeFloodRisk(alerts);
-  } catch(e) {
-    const msg = `<div class="sub-info" style="color:var(--warn)">⚠️ No se pudo conectar con la API del NWS.<br><br><a href="https://www.weather.gov/sju/" target="_blank" style="color:var(--cyan)">→ Ver alertas manualmente en weather.gov/sju</a></div>`;
-    document.getElementById('alerts-detail-full').innerHTML = msg;
+</main>
+
+<footer class="btmbar">
+  <div class="srcs"><span class="l">Fuentes:</span><a href="https://api.weather.gov/" target="_blank">NWS API</a><a href="https://www.ndbc.noaa.gov/" target="_blank">NDBC</a><a href="https://water.weather.gov/" target="_blank">AHPS</a><a href="https://waterdata.usgs.gov/" target="_blank">USGS</a><a href="https://tidesandcurrents.noaa.gov/" target="_blank">NOAA Tides</a></div>
+  <div id="lu">Cargando...</div>
+</footer>
+
+<div id="ib"><p>📲 <strong>Instala esta app en tu celular</strong><br>Accede sin abrir el navegador</p><div class="br"><button id="bti" onclick="installApp()">Instalar</button><button id="btd" onclick="document.getElementById('ib').style.display='none'">Ahora no</button></div></div>
+
+<script>
+'use strict';
+/* ── TEMA ── */
+function toggleTheme(){
+  const h=document.documentElement,d=h.getAttribute('data-theme')==='dark';
+  h.setAttribute('data-theme',d?'light':'dark');
+  document.getElementById('theme-btn').textContent=d?'🌙 Oscuro':'☀️ Claro';
+  document.getElementById('meta-theme').content=d?'#e8f2ff':'#0a1628';
+  localStorage.setItem('theme',d?'light':'dark');
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const s=localStorage.getItem('theme')||'dark';
+  const b=document.getElementById('theme-btn');
+  if(b) b.textContent=s==='light'?'🌙 Oscuro':'☀️ Claro';
+});
+
+/* ── RELOJ ── */
+function updateClock(){
+  const n=new Date(),o={timeZone:'America/Puerto_Rico'};
+  document.getElementById('clock').textContent=n.toLocaleTimeString('es-PR',{...o,hour12:true}).toUpperCase();
+  document.getElementById('date-display').textContent=n.toLocaleDateString('es-PR',{...o,weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase();
+}
+setInterval(updateClock,1000);updateClock();
+
+/* ── TABS ── */
+function switchTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+}
+
+/* ── PWA ── */
+let dp=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;document.getElementById('install-btn').style.display='block';setTimeout(()=>{document.getElementById('ib').style.display='block';},3000);});
+function installApp(){if(!dp)return;dp.prompt();dp.userChoice.then(()=>{dp=null;document.getElementById('ib').style.display='none';document.getElementById('install-btn').style.display='none';});}
+
+/* ── NOTIFICACIONES ── */
+let notifOn=localStorage.getItem('notifOn')==='true';
+function updateNotifUI(){
+  const b=document.getElementById('ns-btn'),t=document.getElementById('ns-title'),d=document.getElementById('ns-desc'),bx=document.getElementById('ns-box');
+  if(!('Notification'in window)){if(t)t.textContent='Notificaciones no soportadas';if(b)b.style.display='none';return;}
+  const p=Notification.permission;
+  if(p==='granted'&&notifOn){if(t)t.textContent='🔔 Notificaciones ACTIVADAS';if(d)d.textContent='Recibirás alertas Flash Flood y Severe cada 10 min';if(b){b.textContent='Desactivar';b.className='btn-n disable';}if(bx)bx.style.borderColor='var(--safe)';}
+  else if(p==='denied'){if(t)t.textContent='🚫 Notificaciones bloqueadas';if(d)d.textContent='Ve a Configuración del navegador para permitirlas';if(b){b.textContent='Bloqueadas';b.disabled=true;}}
+  else{if(t)t.textContent='🔕 Notificaciones no activadas';if(d)d.textContent='Activa para recibir alertas aunque esté cerrado';if(b){b.textContent='Activar';b.className='btn-n enable';}if(bx)bx.style.borderColor='';}
+}
+async function toggleNotif(){
+  if(!('Notification'in window))return;
+  if(notifOn&&Notification.permission==='granted'){notifOn=false;localStorage.setItem('notifOn','false');updateNotifUI();return;}
+  const p=await Notification.requestPermission();
+  if(p==='granted'){notifOn=true;localStorage.setItem('notifOn','true');updateNotifUI();new Notification('✅ Monitor Arecibo',{body:'Notificaciones activadas. Recibirás alertas NWS.'});}
+  else updateNotifUI();
+}
+function testNotif(){
+  if(Notification.permission!=='granted'){alert('Primero activa las notificaciones.');return;}
+  new Notification('🧪 Prueba — Monitor Arecibo',{body:'⚠️ Esta es una notificación de prueba del sistema.',vibrate:[200,100,200]});
+}
+function checkNotif(alerts){
+  if(!notifOn||Notification.permission!=='granted')return;
+  const known=JSON.parse(localStorage.getItem('notifSent')||'[]');
+  alerts.filter(a=>{const s=a.properties.severity,e=(a.properties.event||'').toLowerCase();return(s==='Extreme'||s==='Severe'||e.includes('flood')||e.includes('flash'))&&!known.includes(a.id);}).forEach(a=>{
+    const p=a.properties;
+    new Notification(`⚠️ ${p.event}`,{body:`${(p.headline||p.description||'').substring(0,120)}\n📍 ${(p.areaDesc||'').split(';')[0]}`,vibrate:[300,100,300,100,300],requireInteraction:true,tag:a.id});
+    known.push(a.id);
+  });
+  localStorage.setItem('notifSent',JSON.stringify(known.slice(-100)));
+}
+updateNotifUI();
+
+/* ── HISTORIAL ── */
+let alertHist=JSON.parse(localStorage.getItem('alertHist')||'[]');
+function addHistory(alerts){
+  const now=new Date().toLocaleString('es-PR',{timeZone:'America/Puerto_Rico'});
+  alerts.forEach(a=>{if(!alertHist.some(h=>h.id===a.id)){const p=a.properties;alertHist.unshift({id:a.id,event:p.event,severity:p.severity,area:(p.areaDesc||'').split(';')[0],time:now});}});
+  alertHist=alertHist.slice(0,50);localStorage.setItem('alertHist',JSON.stringify(alertHist));renderHistory();
+}
+function renderHistory(){
+  const el=document.getElementById('alert-history');if(!el)return;
+  if(!alertHist.length){el.innerHTML='<div class="ne">Sin historial aún.</div>';return;}
+  const sc={Extreme:'var(--danger)',Severe:'var(--warn)',Moderate:'var(--gold)',Minor:'var(--safe)'};
+  el.innerHTML=alertHist.map(h=>`<div class="hi"><div class="hit">${h.time}</div><div class="hib" style="background:rgba(0,0,0,.2);color:${sc[h.severity]||'var(--cyan)'};border:1px solid ${sc[h.severity]||'var(--cyan)'}">${h.severity||'INFO'}</div><div class="hiT">${h.event}</div><div class="hiA">📍 ${h.area}</div></div>`).join('');
+}
+function clearHistory(){if(!confirm('¿Borrar historial?'))return;alertHist=[];localStorage.setItem('alertHist','[]');renderHistory();}
+renderHistory();
+
+/* ── MAREAS ── */
+function generateTides(){
+  const now=new Date(),pr=new Date(now.toLocaleString('en-US',{timeZone:'America/Puerto_Rico'}));
+  const bp=(pr.getDate()*0.8+pr.getMonth()*2.3)%(2*Math.PI);
+  const td=Array.from({length:24},(_,h)=>{const t=h/24;return Math.max(.05,.3+.25*Math.sin(2*Math.PI*2*t+bp)+.15*Math.sin(2*Math.PI*t+bp*.7));});
+  const mx=Math.max(...td),mn=Math.min(...td),ch=pr.getHours();
+  const hiI=td.indexOf(mx),loI=td.indexOf(mn);
+  const fh=h=>{const hh=h%24,ap=hh<12?'AM':'PM',hd=hh===0?12:hh>12?hh-12:hh;return `${hd}:00 ${ap}`;};
+  const render=(id,compact)=>{
+    const el=document.getElementById(id);if(!el)return;
+    const bars=td.map((v,i)=>{const p=((v-mn)/(mx-mn))*100,ht=Math.max(3,p*.54),isN=i===ch,isH=v>(mx+mn)/2;return `<div class="tide-b ${isH?'high':''} ${isN?'now':''}" style="height:${ht}px" title="${fh(i)}: ${v.toFixed(2)}m"></div>`;}).join('');
+    const lbls=[0,6,12,18,23].map(h=>`<span>${fh(h)}</span>`).join('');
+    el.innerHTML=`<div><div class="tide-tl">${bars}</div><div class="tide-lbls">${lbls}</div></div><div class="tide-row"><div class="tide-it"><div class="tl">🔺 Pleamar</div><div class="tv" style="color:var(--gold)">${mx.toFixed(2)}m</div><div class="tt">${fh(hiI)}</div></div><div class="tide-it"><div class="tl">🔻 Bajamar</div><div class="tv" style="color:var(--cyan)">${mn.toFixed(2)}m</div><div class="tt">${fh(loI)}</div></div><div class="tide-it"><div class="tl">📍 Ahora</div><div class="tv">${td[ch].toFixed(2)}m</div><div class="tt">${fh(ch)}</div></div></div>${!compact?`<div style="margin-top:8px;font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted);padding:7px;border:1px solid var(--border)">⚠️ Datos calculados. Predicciones oficiales: <a href="https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=9752695" target="_blank" style="color:var(--cyan)">NOAA ID 9752695 →</a></div>`:''}`;
+  };
+  render('tides-home',true);render('tides-full',false);
+}
+
+/* ── ALERTAS ── */
+async function loadAlerts(){
+  try{
+    const r=await fetch('https://api.weather.gov/alerts/active?area=PR&limit=25'),d=await r.json(),alerts=d.features||[];
+    const bn=document.getElementById('alert-banner');
+    if(alerts.length>0){
+      bn.style.display='block';
+      bn.innerHTML=alerts.slice(0,4).map(a=>{const p=a.properties,s=p.severity;let c='adv';if(s==='Extreme'||s==='Severe')c='';else if(s==='Moderate')c='warn';const e=p.expires?new Date(p.expires).toLocaleString('es-PR',{timeZone:'America/Puerto_Rico',weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'Vigente';return `<div class="ai ${c}"><div class="ai-hdr"><span class="ai-type">⚠️ ${p.event||'Alerta'}</span><span class="ai-exp">Expira: ${e}</span></div><div class="ai-title">${(p.headline||p.event||'').split('*')[0].trim().substring(0,88)}</div><div class="ai-desc">${(p.headline||p.description||'').substring(0,190)}...</div></div>`;}).join('');
+    }else bn.style.display='none';
+    const af=document.getElementById('alerts-full');
+    if(af){
+      if(!alerts.length){af.innerHTML=`<div class="si"><span class="dot safe"></span><span style="color:var(--safe)">SIN ALERTAS ACTIVAS</span></div><div class="subinfo" style="margin-top:7px">No hay alertas vigentes para Puerto Rico.</div>`;}
+      else{const sc={Extreme:'var(--danger)',Severe:'var(--warn)',Moderate:'var(--gold)',Minor:'var(--safe)'};af.innerHTML=`<div style="margin-bottom:8px;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted)">${alerts.length} ALERTA${alerts.length>1?'S':''} ACTIVA${alerts.length>1?'S':''}</div>`+alerts.map(a=>{const p=a.properties,col=sc[p.severity]||'var(--gold)',exp=p.expires?new Date(p.expires).toLocaleString('es-PR',{timeZone:'America/Puerto_Rico',weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';return `<div style="border:1px solid var(--border);padding:11px;margin-bottom:7px;background:rgba(14,58,110,.2)"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:5px;margin-bottom:5px"><span style="font-weight:700;font-size:.86rem;color:${col};text-transform:uppercase">${p.event}</span><span style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted)">Expira: ${exp}</span></div><div style="font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted);margin-bottom:5px">📍 ${(p.areaDesc||'').split(';').slice(0,3).join(' • ')}</div>${p.description?`<div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--text);line-height:1.6">${p.description.substring(0,320)}${p.description.length>320?'...':''}</div>`:''}</div>`;}).join('');}
+    }
+    addHistory(alerts);checkNotif(alerts);computeFloodRisk(alerts);
+  }catch(e){
+    const af=document.getElementById('alerts-full');if(af)af.innerHTML=`<div class="subinfo" style="color:var(--warn)">⚠️ Sin conexión. <a href="https://www.weather.gov/sju/" target="_blank" style="color:var(--cyan)">→ weather.gov/sju</a></div>`;
     computeFloodRisk([]);
   }
 }
 
-function computeFloodRisk(alerts) {
-  const flood = alerts.filter(a => {
-    const ev = (a.properties.event||'').toLowerCase();
-    return ev.includes('flood') || ev.includes('flash') || ev.includes('inunda');
-  });
-  let pct=10, label='BAJO', color='var(--safe)';
-  if (flood.some(a=>a.properties.severity==='Extreme'))      { pct=95; label='EXTREMO'; color='var(--danger)'; }
-  else if (flood.some(a=>a.properties.severity==='Severe'))  { pct=72; label='ALTO';    color='var(--warn)'; }
-  else if (flood.some(a=>a.properties.severity==='Moderate')){ pct=50; label='MODERADO';color='var(--gold)'; }
-  else if (flood.length>0)                                    { pct=30; label='BAJO-MOD';color='var(--cyan)'; }
+function computeFloodRisk(alerts){
+  const fl=alerts.filter(a=>{const e=(a.properties.event||'').toLowerCase();return e.includes('flood')||e.includes('flash');});
+  let p=10,l='BAJO',c='var(--safe)';
+  if(fl.some(a=>a.properties.severity==='Extreme')){p=95;l='EXTREMO';c='var(--danger)';}
+  else if(fl.some(a=>a.properties.severity==='Severe')){p=72;l='ALTO';c='var(--warn)';}
+  else if(fl.some(a=>a.properties.severity==='Moderate')){p=50;l='MODERADO';c='var(--gold)';}
+  else if(fl.length>0){p=30;l='BAJO-MOD';c='var(--cyan)';}
   setTimeout(()=>{
-    const g=document.getElementById('gauge-fill');
-    g.style.width=pct+'%';
-    g.style.background=`linear-gradient(90deg,var(--ocean),${color})`;
-    const rv=document.getElementById('risk-value');
-    rv.textContent=pct+'%'; rv.style.color=color;
-    const rl=document.getElementById('risk-label');
-    rl.textContent=label; rl.style.color=color;
+    const gf=document.getElementById('gauge-fill');if(gf){gf.style.width=p+'%';gf.style.background=`linear-gradient(90deg,var(--ocean),${c})`;}
+    const rv=document.getElementById('risk-value');if(rv){rv.textContent=p+'%';rv.style.color=c;}
+    const rl=document.getElementById('risk-label');if(rl){rl.textContent=l;rl.style.color=c;}
   },400);
 }
 
-// ════════════════════════════════════
-// PRONÓSTICO NWS
-// ════════════════════════════════════
-async function loadForecast() {
-  try {
-    const pr = await fetch('https://api.weather.gov/points/18.4736,-66.7220');
-    const pd = await pr.json();
-    const [fcRes, fhRes] = await Promise.all([
-      fetch(pd.properties.forecast),
-      fetch(pd.properties.forecastHourly)
-    ]);
-    const fcData = await fcRes.json();
-    const periods = fcData.properties.periods || [];
-
-    const iconMap = {
-      sunny:'☀️',clear:'🌙',partly:'⛅','mostly cloudy':'☁️',cloudy:'☁️',
-      rain:'🌧️',showers:'🌦️',thunder:'⛈️',storm:'🌩️',wind:'💨',
-      fog:'🌫️',tropical:'🌀',hurricane:'🌀',snow:'🌨️',hail:'🌨️'
-    };
-    const getIcon = sf => {
-      const l = sf.toLowerCase();
-      for (const [k,v] of Object.entries(iconMap)) { if(l.includes(k)) return v; }
-      return '🌤️';
-    };
-
-    const dayPeriods = periods.filter(p=>p.isDaytime).slice(0,7);
-    const nightPeriods = periods.filter(p=>!p.isDaytime).slice(0,7);
-
-    const renderGrid = (days, containerId) => {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      el.innerHTML = days.map(p=>{
-        const d = new Date(p.startTime);
-        const dayName = d.toLocaleDateString('es-PR',{weekday:'short',timeZone:'America/Puerto_Rico'}).toUpperCase();
-        const icon = getIcon(p.shortForecast||'');
-        const prob = p.probabilityOfPrecipitation?.value;
-        const probStr = prob!=null ? prob+'%' : '—';
-        let rc = prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';
-        return `<div class="forecast-day">
-          <div class="day-name">${dayName}</div>
-          <span class="day-icon">${icon}</span>
-          <div class="day-temp">${p.temperature}°${p.temperatureUnit}</div>
-          <div class="day-rain" style="color:${rc}">🌧 ${probStr}</div>
-          <div class="day-short">${(p.shortForecast||'').substring(0,26)}</div>
-        </div>`;
-      }).join('');
-    };
-
-    renderGrid(dayPeriods, 'forecast-grid-home');
-    renderGrid(dayPeriods, 'forecast-grid-full');
-
-    // Night forecast
-    const nightEl = document.getElementById('night-forecast');
-    if (nightEl) {
-      nightEl.innerHTML = nightPeriods.slice(0,4).map(p=>{
-        const d = new Date(p.startTime);
-        const dayName = d.toLocaleDateString('es-PR',{weekday:'long',timeZone:'America/Puerto_Rico'}).toUpperCase();
-        const prob = p.probabilityOfPrecipitation?.value;
-        let rc = prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';
-        return `<div style="border-bottom:1px solid var(--border);padding:8px 0">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-            <span style="font-weight:700;font-size:.8rem">${getIcon(p.shortForecast||'')} ${dayName} — Noche</span>
-            <span style="font-family:'Space Mono',monospace;font-size:.62rem;color:${rc}">🌧 ${prob!=null?prob+'%':'—'}</span>
-          </div>
-          <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.5">${(p.detailedForecast||'').substring(0,160)}...</div>
-        </div>`;
-      }).join('');
-    }
-
-    // Rain info
-    const today = periods[0];
-    const tomorrow = periods.find(p=>p.isDaytime && periods.indexOf(p)>0);
-    const todayR = today?.probabilityOfPrecipitation?.value??'—';
-    const tomR   = tomorrow?.probabilityOfPrecipitation?.value??'—';
-    const todayDet = today?.detailedForecast||'';
-    document.getElementById('rain-info').innerHTML = `
-      <div style="margin-bottom:14px">
-        <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px">HOY</div>
-        <div style="font-size:clamp(1.8rem,5vw,3rem);font-weight:900;line-height:1;color:${todayR>60?'var(--warn)':'var(--safe)'}">${todayR}%</div>
-        <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:2px">PROB. PRECIPITACIÓN</div>
-      </div>
-      <div style="margin-bottom:10px">
-        <div style="font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">MAÑANA</div>
-        <div style="font-size:1.6rem;font-weight:700;color:${tomR>60?'var(--warn)':'var(--text)'}">${tomR}%</div>
-      </div>
-      <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:8px">
-        ${todayDet.substring(0,180)}${todayDet.length>180?'...':''}
-      </div>`;
-
-    // Forecast detail
-    const fdEl = document.getElementById('forecast-detail');
-    if (fdEl && dayPeriods.length > 0) {
-      fdEl.innerHTML = dayPeriods.slice(0,3).map(p => {
-        const d = new Date(p.startTime);
-        const dayName = d.toLocaleDateString('es-PR',{weekday:'long',month:'short',day:'numeric',timeZone:'America/Puerto_Rico'}).toUpperCase();
-        return `<div style="border-bottom:1px solid var(--border);padding:8px 0">
-          <div style="font-weight:700;font-size:.82rem;margin-bottom:4px">${getIcon(p.shortForecast||'')} ${dayName}</div>
-          <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.5">${(p.detailedForecast||'').substring(0,180)}...</div>
-        </div>`;
-      }).join('');
-    }
-
-    // Status summary
-    const hasRain = todayR > 50;
-    const hasHeavy = todayR > 80;
-    document.getElementById('status-summary').innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="status-indicator"><span class="dot ${hasHeavy?'danger':hasRain?'warn':'safe'}"></span><span style="color:${hasHeavy?'var(--danger)':hasRain?'var(--warn)':'var(--safe)'}">Lluvia hoy: ${hasHeavy?'ALTA':hasRain?'MODERADA':'BAJA'}</span></div>
-        <div class="status-indicator"><span class="dot warn"></span><span style="color:var(--warn)">Costa Norte: AVISO MARINO</span></div>
-        <div class="status-indicator"><span class="dot info"></span><span style="color:var(--cyan)">Ríos: ver pestaña RÍOS</span></div>
-        <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:10px;font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);line-height:2">
-          📞 <a href="tel:7872534586" style="color:var(--cyan)">NWS SJU: (787) 253-4586</a><br>
-          🆘 <a href="tel:911" style="color:var(--danger);font-weight:700">Emergencias: 9-1-1</a>
-        </div>
-      </div>`;
-
-  } catch(e) {
-    ['forecast-grid-home','forecast-grid-full'].forEach(id => {
-      const el = document.getElementById(id);
-      if(el) el.innerHTML = `<div style="grid-column:1/-1;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--warn)">⚠️ Sin conexión. <a href="https://forecast.weather.gov/MapClick.php?CityName=Arecibo&state=PR" target="_blank" style="color:var(--cyan)">→ Ver en NWS</a></div>`;
-    });
-    document.getElementById('rain-info').innerHTML = `<div style="font-family:'Space Mono',monospace;font-size:.65rem;color:var(--warn)">Sin conexión. <a href="https://forecast.weather.gov" target="_blank" style="color:var(--cyan)">NWS ↗</a></div>`;
-  }
+/* ── PRONÓSTICO ── */
+async function loadForecast(){
+  try{
+    const pr=await fetch('https://api.weather.gov/points/18.4736,-66.7220'),pd=await pr.json();
+    const fc=await(await fetch(pd.properties.forecast)).json();
+    const periods=fc.properties.periods||[];
+    const im={sunny:'☀️',clear:'🌙',partly:'⛅','mostly cloudy':'☁️',cloudy:'☁️',rain:'🌧️',showers:'🌦️',thunder:'⛈️',storm:'🌩️',wind:'💨',fog:'🌫️',tropical:'🌀',hurricane:'🌀'};
+    const gi=sf=>{const l=(sf||'').toLowerCase();for(const[k,v]of Object.entries(im)){if(l.includes(k))return v;}return '🌤️';};
+    const dayP=periods.filter(p=>p.isDaytime).slice(0,7),nightP=periods.filter(p=>!p.isDaytime).slice(0,7);
+    const rg=(days,id)=>{const el=document.getElementById(id);if(!el)return;el.innerHTML=days.map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'short',timeZone:'America/Puerto_Rico'}).toUpperCase(),prob=p.probabilityOfPrecipitation?.value,ps=prob!=null?prob+'%':'—',rc=prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';return `<div class="fcd"><div class="dn">${dn}</div><span class="di">${gi(p.shortForecast)}</span><div class="dt">${p.temperature}°${p.temperatureUnit}</div><div class="dr" style="color:${rc}">🌧 ${ps}</div><div class="ds">${(p.shortForecast||'').substring(0,22)}</div></div>`;}).join('');};
+    rg(dayP,'fcg-home');rg(dayP,'fcg-full');
+    const ne=document.getElementById('night-fc');
+    if(ne)ne.innerHTML=nightP.slice(0,4).map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'long',timeZone:'America/Puerto_Rico'}).toUpperCase(),prob=p.probabilityOfPrecipitation?.value,rc=prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';return `<div style="border-bottom:1px solid var(--border);padding:7px 0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><span style="font-weight:700;font-size:.78rem">${gi(p.shortForecast)} ${dn}</span><span style="font-family:'Space Mono',monospace;font-size:.58rem;color:${rc}">🌧 ${prob!=null?prob+'%':'—'}</span></div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.5">${(p.detailedForecast||'').substring(0,130)}...</div></div>`;}).join('');
+    const fd=document.getElementById('fc-detail');
+    if(fd)fd.innerHTML=dayP.slice(0,3).map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'long',month:'short',day:'numeric',timeZone:'America/Puerto_Rico'}).toUpperCase();return `<div style="border-bottom:1px solid var(--border);padding:7px 0"><div style="font-weight:700;font-size:.78rem;margin-bottom:2px">${gi(p.shortForecast)} ${dn}</div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.5">${(p.detailedForecast||'').substring(0,150)}...</div></div>`;}).join('');
+    const t=periods[0],tm=periods.find(p=>p.isDaytime&&periods.indexOf(p)>0);
+    const tR=t?.probabilityOfPrecipitation?.value??'—',tmR=tm?.probabilityOfPrecipitation?.value??'—',tD=t?.detailedForecast||'';
+    const ri=document.getElementById('rain-info');
+    if(ri)ri.innerHTML=`<div style="margin-bottom:10px"><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1px">HOY</div><div style="font-size:clamp(1.5rem,4vw,2.6rem);font-weight:900;line-height:1;color:${tR>60?'var(--warn)':'var(--safe)'}">${tR}%</div><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);margin-top:1px">PROB. PRECIPITACIÓN</div></div><div style="margin-bottom:9px"><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1px">MAÑANA</div><div style="font-size:1.4rem;font-weight:700;color:${tmR>60?'var(--warn)':'var(--text)'}">${tmR}%</div></div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:7px">${tD.substring(0,160)}${tD.length>160?'...':''}</div>`;
+    const hR=tR>50,hH=tR>80,ss=document.getElementById('status-summary');
+    if(ss)ss.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px"><div class="si"><span class="dot ${hH?'danger':hR?'warn':'safe'}"></span><span style="color:${hH?'var(--danger)':hR?'var(--warn)':'var(--safe)'}">Lluvia hoy: ${hH?'ALTA':hR?'MODERADA':'BAJA'}</span></div><div class="si"><span class="dot warn"></span><span style="color:var(--warn)">Costa Norte: AVISO</span></div><div class="si"><span class="dot info"></span><span style="color:var(--cyan)">Ríos: ver pestaña RÍOS</span></div><div style="border-top:1px solid var(--border);margin-top:5px;padding-top:8px;font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:2">📞 <a href="tel:7872534586" style="color:var(--cyan)">NWS: (787) 253-4586</a><br>🆘 <a href="tel:911" style="color:var(--danger);font-weight:700">Emergencias: 9-1-1</a></div></div>`;
+  }catch(e){['fcg-home','fcg-full'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=`<div style="grid-column:1/-1;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--warn)">⚠️ Sin conexión. <a href="https://forecast.weather.gov/MapClick.php?CityName=Arecibo&state=PR" target="_blank" style="color:var(--cyan)">→ NWS</a></div>`;});}
 }
 
-// ════════════════════════════════════
-// MARÍTIMO (datos fijos NWS + boyas)
-// ════════════════════════════════════
-function loadMaritime() {
-  const maritime = [
-    { label:'Oleaje',    value:'9-10 pies', level:'danger' },
-    { label:'Vientos',   value:'E 10-20 kt, ráf. 30 kt', level:'warn' },
-    { label:'Período',   value:'8-10 seg.', level:'warn' },
-    { label:'Corrientes',value:'Peligrosas', level:'danger' },
-    { label:'Surf',      value:'Peligroso', level:'danger' },
-    { label:'Estado',    value:'AVISO VIGENTE', level:'danger' },
-  ];
-
-  const rows = maritime.map(m=>`<tr><td>${m.label}</td><td><span class="marine-level ${m.level}">${m.value}</span></td></tr>`).join('');
-
-  ['maritime-table-home','maritime-table-full'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.innerHTML = rows;
-  });
-
-  ['maritime-ribbon','maritime-ribbon-2'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.style.display='block';
-  });
-
-  // Boyas cercanas (estáticas con links a datos en vivo)
-  const buoyEl = document.getElementById('buoy-grid');
-  if (buoyEl) {
-    buoyEl.innerHTML = `
-      <div class="buoy-card">
-        <div class="buoy-name">🔴 Boya 41053 — San Juan</div>
-        <div class="buoy-data">
-          Oleaje: <span>~2.8 m</span><br>
-          Temp. Agua: <span>~27°C</span><br>
-          Viento: <span>E 18 kt</span><br>
-          <a href="https://www.ndbc.noaa.gov/station_page.php?station=41053" target="_blank" style="color:var(--cyan)">→ Ver datos en vivo</a>
-        </div>
-      </div>
-      <div class="buoy-card">
-        <div class="buoy-name">🟡 Boya 41047 — Atlántico N</div>
-        <div class="buoy-data">
-          Oleaje: <span>~2.5 m</span><br>
-          Temp. Agua: <span>~27°C</span><br>
-          Período: <span>~9 seg.</span><br>
-          <a href="https://www.ndbc.noaa.gov/station_page.php?station=41047" target="_blank" style="color:var(--cyan)">→ Ver datos en vivo</a>
-        </div>
-      </div>
-      <div class="buoy-card">
-        <div class="buoy-name">🟡 Boya BEPB4 — Isla de Pájaros</div>
-        <div class="buoy-data">
-          Más cercana a Arecibo<br>
-          Costa norte PR<br>
-          <a href="https://www.ndbc.noaa.gov/station_page.php?station=bepb4" target="_blank" style="color:var(--cyan)">→ Ver datos en vivo</a>
-        </div>
-      </div>
-      <div class="buoy-card">
-        <div class="buoy-name">📡 Todas las Boyas</div>
-        <div class="buoy-data">
-          Mapa interactivo<br>
-          NDBC — NOAA<br>
-          <a href="https://www.ndbc.noaa.gov/obs.shtml?lat=18.5&lon=-66.7&zoom=8" target="_blank" style="color:var(--cyan)">→ Ver mapa completo</a>
-        </div>
-      </div>`;
-  }
+/* ── MARÍTIMO ── */
+function loadMaritime(){
+  const d=[{l:'Oleaje',v:'9-10 pies',c:'danger'},{l:'Vientos',v:'E 10-20 kt, ráf. 30 kt',c:'warn'},{l:'Período',v:'8-10 seg.',c:'warn'},{l:'Corrientes',v:'Peligrosas',c:'danger'},{l:'Surf',v:'Peligroso',c:'danger'},{l:'Aviso',v:'VIGENTE',c:'danger'}];
+  const rows=d.map(m=>`<tr><td>${m.l}</td><td><span class="ml ${m.c}">${m.v}</span></td></tr>`).join('');
+  ['mt-home','mt-full'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=rows;});
+  ['mr1','mr2'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='block';});
 }
 
-// ════════════════════════════════════
-// CARGA PRINCIPAL
-// ════════════════════════════════════
-async function loadAllData() {
-  const btn = document.getElementById('refresh-btn');
-  btn.textContent = '↻ Actualizando...';
-  btn.classList.add('active');
-  await Promise.all([loadAlerts(), loadForecast()]);
-  loadMaritime();
-  const now = new Date().toLocaleString('es-PR',{timeZone:'America/Puerto_Rico'});
-  document.getElementById('last-updated').textContent = '⬆️ ' + now.toUpperCase() + ' AST';
-  btn.textContent = '⟳ Actualizar';
-  btn.classList.remove('active');
+/* ── NOTAS DE CAMPO ── */
+let fNotes=JSON.parse(localStorage.getItem('fNotes')||'[]');
+const tl={severo:'🔴 Severo',moderado:'🟠 Moderado',menor:'🟡 Menor',info:'📋 Info'};
+function saveNote(){
+  const type=document.getElementById('note-type').value,title=document.getElementById('note-title').value.trim(),body=document.getElementById('note-body').value.trim(),loc=document.getElementById('note-loc').value.trim();
+  if(!title&&!body){alert('Escribe al menos un título o descripción.');return;}
+  const now=new Date().toLocaleString('es-PR',{timeZone:'America/Puerto_Rico'});
+  fNotes.unshift({id:Date.now(),type,title:title||'Sin título',body,location:loc,time:now});
+  localStorage.setItem('fNotes',JSON.stringify(fNotes));
+  document.getElementById('note-title').value='';document.getElementById('note-body').value='';document.getElementById('note-loc').value='';
+  renderNotes();updateNoteStats();
 }
+function deleteNote(id){fNotes=fNotes.filter(n=>n.id!==id);localStorage.setItem('fNotes',JSON.stringify(fNotes));renderNotes();updateNoteStats();}
+function renderNotes(){
+  const el=document.getElementById('notes-list');if(!el)return;
+  const f=(document.getElementById('filter-type')||{}).value||'';
+  const shown=f?fNotes.filter(n=>n.type===f):fNotes;
+  if(!shown.length){el.innerHTML=`<div class="ne">Sin observaciones${f?' para este tipo':' aún'}.</div>`;return;}
+  el.innerHTML=shown.map(n=>`<div class="nc ${n.type}"><div class="nc-hdr"><div class="nc-meta"><span class="nt ${n.type}">${tl[n.type]||n.type}</span><span class="nc-time">🕐 ${n.time}</span></div><div class="nca"><button class="btn-ds" onclick="deleteNote(${n.id})">✕</button></div></div><div class="nc-title">${n.title}</div>${n.body?`<div class="nc-body">${n.body}</div>`:''} ${n.location?`<div class="nc-loc">📍 ${n.location}</div>`:''}</div>`).join('');
+}
+function updateNoteStats(){
+  const t=fNotes.length,s=fNotes.filter(n=>n.type==='severo').length,m=fNotes.filter(n=>n.type==='moderado').length,i=fNotes.filter(n=>n.type==='info'||n.type==='menor').length;
+  const ns=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  ns('ns-total',t);ns('ns-sev',s);ns('ns-mod',m);ns('ns-inf',i);
+}
+function clearNotes(){if(!confirm('¿Borrar TODAS las observaciones?'))return;fNotes=[];localStorage.setItem('fNotes','[]');renderNotes();updateNoteStats();}
+function exportNotes(){
+  if(!fNotes.length){alert('No hay observaciones.');return;}
+  const now=new Date().toLocaleString('es-PR',{timeZone:'America/Puerto_Rico'});
+  let txt=`BITÁCORA DE CAMPO — MONITOR METEOROLÓGICO ARECIBO, PR\nExportado: ${now}\n${'═'.repeat(60)}\n\n`;
+  fNotes.forEach((n,i)=>{txt+=`[${i+1}] ${(tl[n.type]||n.type).toUpperCase()}\nFecha/Hora: ${n.time}\nTítulo: ${n.title}\n`;if(n.location)txt+=`Ubicación: ${n.location}\n`;if(n.body)txt+=`Descripción:\n${n.body}\n`;txt+=`${'─'.repeat(40)}\n\n`;});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));a.download=`Bitacora_Arecibo_${new Date().toISOString().slice(0,10)}.txt`;a.click();
+}
+renderNotes();updateNoteStats();
 
-// Arranque
+/* ── CARGA PRINCIPAL ── */
+async function loadAllData(){
+  const btn=document.getElementById('refresh-btn');
+  if(btn){btn.textContent='↻ Cargando...';btn.classList.add('active');}
+  await Promise.all([loadAlerts(),loadForecast()]);
+  loadMaritime();generateTides();
+  const lu=document.getElementById('lu');
+  if(lu)lu.textContent='⬆️ '+new Date().toLocaleString('es-PR',{timeZone:'America/Puerto_Rico'}).toUpperCase()+' AST';
+  if(btn){btn.textContent='⟳ Actualizar';btn.classList.remove('active');}
+}
 loadAllData();
-
-// Auto-refresh cada 10 minutos
-setInterval(loadAllData, 10 * 60 * 1000);
+setInterval(loadAllData,10*60*1000);
 </script>
-
 </body>
 </html>
