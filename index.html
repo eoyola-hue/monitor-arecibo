@@ -241,6 +241,8 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-
     <div id="date-display">Cargando...</div>
     <div class="hbtns">
       <button class="hbtn" onclick="toggleTheme()" id="theme-btn">🌙 Oscuro</button>
+      <a class="hbtn" id="pdf-btn" href="reports/reporte_mas_reciente.pdf" target="_blank"
+         style="text-decoration:none;display:none">📄 Reporte PDF</a>
       <button class="hbtn" onclick="loadAllData()" id="refresh-btn">⟳ Actualizar</button>
       <button class="hbtn" onclick="installApp()" id="install-btn" style="display:none">📲 Instalar</button>
     </div>
@@ -295,6 +297,18 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-
     <div class="card gc">
       <div class="clbl">🌊 Mareas Hoy — Arecibo</div>
       <div id="tides-home"><div class="lt">Calculando...<span class="spin"></span></div></div>
+    </div>
+  </div>
+
+  <!-- CARD REPORTE PDF -->
+  <div class="card g1 sc" id="card-reporte" style="display:none">
+    <div class="clbl">📄 Último Reporte PDF Generado</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div id="reporte-info" style="font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);line-height:1.9"></div>
+      <a id="reporte-download" href="reports/reporte_mas_reciente.pdf" target="_blank"
+         style="display:inline-block;background:var(--safe);color:var(--navy);padding:10px 20px;text-decoration:none;font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;transition:all .2s;white-space:nowrap">
+        📥 DESCARGAR PDF
+      </a>
     </div>
   </div>
 </div>
@@ -886,12 +900,35 @@ function refreshGOES(){
   img.src=base+'?t='+Date.now(); // cache-bust
 }
 
+/* ── REPORTE PDF ── */
+async function loadReporteInfo(){
+  try{
+    const r=await fetch('reports/reporte_info.json?t='+Date.now());
+    if(!r.ok) return;
+    const info=await r.json();
+    const card=document.getElementById('card-reporte');
+    const div=document.getElementById('reporte-info');
+    const btn=document.getElementById('pdf-btn');
+    if(card) card.style.display='block';
+    if(btn)  btn.style.display='inline-block';
+    if(div) div.innerHTML=
+      `📅 <strong style="color:var(--text)">${info.fecha||'—'}</strong><br>`+
+      `🕐 Generado: <strong style="color:var(--text)">${info.hora||'—'}</strong><br>`+
+      `⚠️ Alertas: <strong style="color:var(--${info.alertas_total>0?'warn':'safe'})">${info.alertas_total}</strong> total · `+
+      `<strong style="color:var(--${info.alertas_inundacion>0?'danger':'safe'})">${info.alertas_inundacion}</strong> inundación<br>`+
+      `🌧️ Lluvia hoy: <strong style="color:var(--${(info.lluvia_hoy_pct||0)>=60?'warn':'safe'})">${info.lluvia_hoy_pct!=null?info.lluvia_hoy_pct+'%':'—'}</strong> · `+
+      `Riesgo: <strong style="color:var(--${info.riesgo==='EXTREMO'?'danger':info.riesgo==='ALTO'?'warn':info.riesgo==='MODERADO'?'gold':'safe'})">${info.riesgo}</strong>`;
+  }catch(e){
+    // No hay reporte todavía — silencioso
+  }
+}
+
 /* ── CARGA PRINCIPAL ── */
 async function loadAllData(){
   const btn=document.getElementById('refresh-btn');
   if(btn){btn.textContent='↻ Cargando...';btn.classList.add('active');}
   await Promise.all([loadAlerts(),loadForecast()]);
-  loadMaritime();generateTides();
+  loadMaritime();generateTides();loadReporteInfo();
   const lu=document.getElementById('lu');
   if(lu)lu.textContent='⬆️ '+new Date().toLocaleString('es-PR',{timeZone:'America/Puerto_Rico'}).toUpperCase()+' AST';
   if(btn){btn.textContent='⟳ Actualizar';btn.classList.remove('active');}
