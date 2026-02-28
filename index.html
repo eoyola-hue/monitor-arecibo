@@ -316,12 +316,23 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-
   </div>
   <div class="g2b">
     <div class="card">
-      <div class="clbl">🛰️ Satélite GOES-16 — Puerto Rico</div>
-      <div class="radar-wrap">
-        <iframe src="https://www.star.nesdis.noaa.gov/GOES/sector_mosaic.php?sector=pr&band=GEOCOLOR&length=12" title="Satélite GOES PR" loading="lazy" style="height:280px" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+      <div class="clbl">🛰️ Satélite GOES-16 — Puerto Rico (Imagen en Vivo)</div>
+      <div style="position:relative;background:#000;border:1px solid var(--border);overflow:hidden;">
+        <div style="position:absolute;top:7px;left:7px;background:rgba(10,22,40,.85);padding:3px 8px;font-family:'Space Mono',monospace;font-size:.52rem;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;z-index:2;pointer-events:none;">🛰️ GOES-16 GEOCOLOR · PR</div>
+        <img id="goes-img"
+          src="https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/pr/GEOCOLOR/latest.jpg"
+          alt="Satélite GOES-16 Puerto Rico"
+          style="width:100%;display:block;min-height:200px;object-fit:cover;"
+          onerror="this.onerror=null;this.src='https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/pr/02/latest.jpg';document.getElementById('goes-fallback').style.display='block';"
+        />
+        <div id="goes-fallback" style="display:none;padding:14px;font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);text-align:center">
+          Imagen no disponible. Ver en: <a href="https://www.star.nesdis.noaa.gov/GOES/sector.php?sat=G16&sector=pr" target="_blank" style="color:var(--cyan)">NOAA GOES Viewer →</a>
+        </div>
       </div>
-      <div class="rlinks">
-        <a href="https://www.star.nesdis.noaa.gov/GOES/sector.php?sat=G16&sector=pr" target="_blank" class="rlink">🛰️ GOES-16 PR Completo</a>
+      <div class="rlinks" style="margin-top:7px">
+        <a href="https://www.star.nesdis.noaa.gov/GOES/sector.php?sat=G16&sector=pr" target="_blank" class="rlink">🛰️ GOES-16 PR Animado</a>
+        <a href="https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/pr/GEOCOLOR/latest.jpg" target="_blank" class="rlink">🖼️ Imagen Completa</a>
+        <button class="rlink" onclick="refreshGOES()" style="cursor:pointer;border:none">🔄 Actualizar</button>
       </div>
     </div>
     <div class="card">
@@ -736,6 +747,70 @@ function computeFloodRisk(alerts){
   },400);
 }
 
+/* ── TRADUCCIÓN NWS (inglés → español) ── */
+function traducir(txt){
+  if(!txt) return '';
+  const map=[
+    // Condiciones generales
+    [/Mostly Sunny/gi,'Mayormente Soleado'],[/Partly Sunny/gi,'Parcialmente Soleado'],
+    [/Sunny/gi,'Soleado'],[/Mostly Clear/gi,'Mayormente Despejado'],[/Partly Cloudy/gi,'Parcialmente Nublado'],
+    [/Mostly Cloudy/gi,'Mayormente Nublado'],[/Cloudy/gi,'Nublado'],[/Clear/gi,'Despejado'],
+    [/Overcast/gi,'Cubierto'],
+    // Lluvia
+    [/Chance (of )?Showers/gi,'Posibilidad de Aguaceros'],[/Showers/gi,'Aguaceros'],
+    [/Chance (of )?Rain/gi,'Posibilidad de Lluvia'],[/Light Rain/gi,'Lluvia Ligera'],
+    [/Heavy Rain/gi,'Lluvia Intensa'],[/Rain/gi,'Lluvia'],
+    [/Chance (of )?Drizzle/gi,'Posibilidad de Llovizna'],[/Drizzle/gi,'Llovizna'],
+    // Tormentas
+    [/Chance (of )?Thunderstorms/gi,'Posibilidad de Tormentas Eléctricas'],
+    [/Thunderstorms/gi,'Tormentas Eléctricas'],
+    [/Chance (of )?Storms/gi,'Posibilidad de Tormentas'],[/Storms/gi,'Tormentas'],
+    // Tropical
+    [/Tropical Storm/gi,'Tormenta Tropical'],[/Hurricane/gi,'Huracán'],
+    // Viento / niebla
+    [/Breezy/gi,'Ventoso'],[/Windy/gi,'Vientos Fuertes'],[/Foggy/gi,'Neblinoso'],[/Fog/gi,'Neblina'],
+    [/Haze/gi,'Bruma'],[/Hazy/gi,'Brumoso'],
+    // Temperatura
+    [/High near (\d+)/gi,'Máxima de $1°F'],[/Low around (\d+)/gi,'Mínima de $1°F'],
+    [/High around (\d+)/gi,'Máxima de $1°F'],[/Low near (\d+)/gi,'Mínima de $1°F'],
+    // Viento dirección
+    [/North wind/gi,'Viento del Norte'],[/South wind/gi,'Viento del Sur'],
+    [/East wind/gi,'Viento del Este'],[/West wind/gi,'Viento del Oeste'],
+    [/Northeast wind/gi,'Viento del Noreste'],[/Northwest wind/gi,'Viento del Noroeste'],
+    [/Southeast wind/gi,'Viento del Sureste'],[/Southwest wind/gi,'Viento del Suroeste'],
+    [/\bNorth\b/g,'Norte'],[/\bSouth\b/g,'Sur'],[/\bEast\b/g,'Este'],[/\bWest\b/g,'Oeste'],
+    [/\bNE\b/g,'NE'],[/\bNW\b/g,'NO'],[/\bSE\b/g,'SE'],[/\bSW\b/g,'SO'],
+    // Velocidad viento
+    [/around (\d+) mph/gi,'alrededor de $1 mph'],[/(\d+) to (\d+) mph/gi,'$1 a $2 mph'],
+    [/gusts as high as (\d+) mph/gi,'ráfagas hasta $1 mph'],
+    [/with gusts/gi,'con ráfagas'],
+    // Probabilidad
+    [/A chance of/gi,'Posibilidad de'],[/Chance of precipitation is (\d+)%/gi,'Probabilidad de precipitación: $1%'],
+    [/A slight chance of/gi,'Baja posibilidad de'],
+    [/Likely/gi,'Probable'],[/Possible/gi,'Posible'],
+    // Tiempo del día
+    [/\bThis morning\b/gi,'Esta mañana'],[/\bThis afternoon\b/gi,'Esta tarde'],
+    [/\bTonight\b/gi,'Esta noche'],[/\bOvernight\b/gi,'Durante la noche'],
+    [/\bThis evening\b/gi,'Esta noche'],[/\bBefore midnight\b/gi,'Antes de medianoche'],
+    [/\bAfter midnight\b/gi,'Después de la medianoche'],
+    [/\bTomorrow\b/gi,'Mañana'],[/\bTomorrow morning\b/gi,'Mañana en la mañana'],
+    [/\bTomorrow afternoon\b/gi,'Mañana en la tarde'],
+    [/\bMonday\b/gi,'Lunes'],[/\bTuesday\b/gi,'Martes'],[/\bWednesday\b/gi,'Miércoles'],
+    [/\bThursday\b/gi,'Jueves'],[/\bFriday\b/gi,'Viernes'],[/\bSaturday\b/gi,'Sábado'],[/\bSunday\b/gi,'Domingo'],
+    // Otros comunes
+    [/New rainfall amounts/gi,'Acumulación de lluvia'],[/between/gi,'entre'],
+    [/Patchy/gi,'Parcial'],[/areas of/gi,'áreas de'],
+    [/percent/gi,'por ciento'],
+    [/and/gi,'y'],[/or/gi,'o'],[/with/gi,'con'],[/near/gi,'cerca de'],
+    [/mainly/gi,'principalmente'],[/becoming/gi,'convirtiéndose en'],
+    [/increasing to/gi,'aumentando a'],[/decreasing to/gi,'disminuyendo a'],
+    [/in the morning/gi,'en la mañana'],[/in the afternoon/gi,'en la tarde'],[/in the evening/gi,'en la noche'],
+  ];
+  let r=txt;
+  map.forEach(([re,es])=>{ r=r.replace(re,es); });
+  return r;
+}
+
 /* ── PRONÓSTICO ── */
 async function loadForecast(){
   try{
@@ -745,16 +820,16 @@ async function loadForecast(){
     const im={sunny:'☀️',clear:'🌙',partly:'⛅','mostly cloudy':'☁️',cloudy:'☁️',rain:'🌧️',showers:'🌦️',thunder:'⛈️',storm:'🌩️',wind:'💨',fog:'🌫️',tropical:'🌀',hurricane:'🌀'};
     const gi=sf=>{const l=(sf||'').toLowerCase();for(const[k,v]of Object.entries(im)){if(l.includes(k))return v;}return '🌤️';};
     const dayP=periods.filter(p=>p.isDaytime).slice(0,7),nightP=periods.filter(p=>!p.isDaytime).slice(0,7);
-    const rg=(days,id)=>{const el=document.getElementById(id);if(!el)return;el.innerHTML=days.map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'short',timeZone:'America/Puerto_Rico'}).toUpperCase(),prob=p.probabilityOfPrecipitation?.value,ps=prob!=null?prob+'%':'—',rc=prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';return `<div class="fcd"><div class="dn">${dn}</div><span class="di">${gi(p.shortForecast)}</span><div class="dt">${p.temperature}°${p.temperatureUnit}</div><div class="dr" style="color:${rc}">🌧 ${ps}</div><div class="ds">${(p.shortForecast||'').substring(0,22)}</div></div>`;}).join('');};
+    const rg=(days,id)=>{const el=document.getElementById(id);if(!el)return;el.innerHTML=days.map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'short',timeZone:'America/Puerto_Rico'}).toUpperCase(),prob=p.probabilityOfPrecipitation?.value,ps=prob!=null?prob+'%':'—',rc=prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';return `<div class="fcd"><div class="dn">${dn}</div><span class="di">${gi(p.shortForecast)}</span><div class="dt">${p.temperature}°${p.temperatureUnit}</div><div class="dr" style="color:${rc}">🌧 ${ps}</div><div class="ds">${traducir(p.shortForecast||'').substring(0,26)}</div></div>`;}).join('');};
     rg(dayP,'fcg-home');rg(dayP,'fcg-full');
     const ne=document.getElementById('night-fc');
-    if(ne)ne.innerHTML=nightP.slice(0,4).map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'long',timeZone:'America/Puerto_Rico'}).toUpperCase(),prob=p.probabilityOfPrecipitation?.value,rc=prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';return `<div style="border-bottom:1px solid var(--border);padding:7px 0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><span style="font-weight:700;font-size:.78rem">${gi(p.shortForecast)} ${dn}</span><span style="font-family:'Space Mono',monospace;font-size:.58rem;color:${rc}">🌧 ${prob!=null?prob+'%':'—'}</span></div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.5">${(p.detailedForecast||'').substring(0,130)}...</div></div>`;}).join('');
+    if(ne)ne.innerHTML=nightP.slice(0,4).map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'long',timeZone:'America/Puerto_Rico'}).toUpperCase(),prob=p.probabilityOfPrecipitation?.value,rc=prob==null?'var(--muted)':prob<30?'var(--safe)':prob<60?'var(--gold)':prob<80?'var(--warn)':'var(--danger)';return `<div style="border-bottom:1px solid var(--border);padding:7px 0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><span style="font-weight:700;font-size:.78rem">${gi(p.shortForecast)} ${dn}</span><span style="font-family:'Space Mono',monospace;font-size:.58rem;color:${rc}">🌧 ${prob!=null?prob+'%':'—'}</span></div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.5">${traducir(p.detailedForecast||'').substring(0,180)}...</div></div>`;}).join('');
     const fd=document.getElementById('fc-detail');
-    if(fd)fd.innerHTML=dayP.slice(0,3).map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'long',month:'short',day:'numeric',timeZone:'America/Puerto_Rico'}).toUpperCase();return `<div style="border-bottom:1px solid var(--border);padding:7px 0"><div style="font-weight:700;font-size:.78rem;margin-bottom:2px">${gi(p.shortForecast)} ${dn}</div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.5">${(p.detailedForecast||'').substring(0,150)}...</div></div>`;}).join('');
+    if(fd)fd.innerHTML=dayP.slice(0,3).map(p=>{const d=new Date(p.startTime),dn=d.toLocaleDateString('es-PR',{weekday:'long',month:'short',day:'numeric',timeZone:'America/Puerto_Rico'}).toUpperCase();return `<div style="border-bottom:1px solid var(--border);padding:7px 0"><div style="font-weight:700;font-size:.78rem;margin-bottom:2px">${gi(p.shortForecast)} ${dn}</div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.5">${traducir(p.detailedForecast||'').substring(0,200)}...</div></div>`;}).join('');
     const t=periods[0],tm=periods.find(p=>p.isDaytime&&periods.indexOf(p)>0);
-    const tR=t?.probabilityOfPrecipitation?.value??'—',tmR=tm?.probabilityOfPrecipitation?.value??'—',tD=t?.detailedForecast||'';
+    const tR=t?.probabilityOfPrecipitation?.value??'—',tmR=tm?.probabilityOfPrecipitation?.value??'—',tD=traducir(t?.detailedForecast||'');
     const ri=document.getElementById('rain-info');
-    if(ri)ri.innerHTML=`<div style="margin-bottom:10px"><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1px">HOY</div><div style="font-size:clamp(1.5rem,4vw,2.6rem);font-weight:900;line-height:1;color:${tR>60?'var(--warn)':'var(--safe)'}">${tR}%</div><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);margin-top:1px">PROB. PRECIPITACIÓN</div></div><div style="margin-bottom:9px"><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1px">MAÑANA</div><div style="font-size:1.4rem;font-weight:700;color:${tmR>60?'var(--warn)':'var(--text)'}">${tmR}%</div></div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:7px">${tD.substring(0,160)}${tD.length>160?'...':''}</div>`;
+    if(ri)ri.innerHTML=`<div style="margin-bottom:10px"><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1px">HOY</div><div style="font-size:clamp(1.5rem,4vw,2.6rem);font-weight:900;line-height:1;color:${tR>60?'var(--warn)':'var(--safe)'}">${tR}%</div><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);margin-top:1px">PROB. PRECIPITACIÓN</div></div><div style="margin-bottom:9px"><div style="font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1px">MAÑANA</div><div style="font-size:1.4rem;font-weight:700;color:${tmR>60?'var(--warn)':'var(--text)'}">${tmR}%</div></div><div style="font-family:'Space Mono',monospace;font-size:.57rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:7px">${tD.substring(0,220)}${tD.length>220?'...':''}</div>`;
     const hR=tR>50,hH=tR>80,ss=document.getElementById('status-summary');
     if(ss)ss.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px"><div class="si"><span class="dot ${hH?'danger':hR?'warn':'safe'}"></span><span style="color:${hH?'var(--danger)':hR?'var(--warn)':'var(--safe)'}">Lluvia hoy: ${hH?'ALTA':hR?'MODERADA':'BAJA'}</span></div><div class="si"><span class="dot warn"></span><span style="color:var(--warn)">Costa Norte: AVISO</span></div><div class="si"><span class="dot info"></span><span style="color:var(--cyan)">Ríos: ver pestaña RÍOS</span></div><div style="border-top:1px solid var(--border);margin-top:5px;padding-top:8px;font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);line-height:2">📞 <a href="tel:7872534586" style="color:var(--cyan)">NWS: (787) 253-4586</a><br>🆘 <a href="tel:911" style="color:var(--danger);font-weight:700">Emergencias: 9-1-1</a></div></div>`;
   }catch(e){['fcg-home','fcg-full'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=`<div style="grid-column:1/-1;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--warn)">⚠️ Sin conexión. <a href="https://forecast.weather.gov/MapClick.php?CityName=Arecibo&state=PR" target="_blank" style="color:var(--cyan)">→ NWS</a></div>`;});}
@@ -802,6 +877,14 @@ function exportNotes(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));a.download=`Bitacora_Arecibo_${new Date().toISOString().slice(0,10)}.txt`;a.click();
 }
 renderNotes();updateNoteStats();
+
+/* ── SATÉLITE GOES ── */
+function refreshGOES(){
+  const img=document.getElementById('goes-img');
+  if(!img) return;
+  const base='https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/pr/GEOCOLOR/latest.jpg';
+  img.src=base+'?t='+Date.now(); // cache-bust
+}
 
 /* ── CARGA PRINCIPAL ── */
 async function loadAllData(){
